@@ -268,7 +268,25 @@ function renderResults(g) {
   els.results.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+// ---------- magic link ----------
+// A trusted person can be sent a link like  https://site/#key=gsk_…&provider=groq
+// The key is saved to their browser and immediately scrubbed from the URL, so it
+// never appears in the repo, the page source, or their browser history.
+function applyMagicLink() {
+  if (!location.hash) return;
+  const params = new URLSearchParams(location.hash.slice(1));
+  const key = params.get("key") || (location.hash.slice(1).startsWith("gsk_") ? location.hash.slice(1) : null);
+  if (!key) return;
+  const provider = PROVIDERS[params.get("provider")] ? params.get("provider") : "groq";
+  localStorage.setItem("gmc_api_key", key.trim());
+  localStorage.setItem("gmc_provider", provider);
+  localStorage.setItem("gmc_model", PROVIDERS[provider].defaultModel);
+  history.replaceState(null, "", location.pathname + location.search);
+  setStatus("✅ API key configured automatically — you're ready to grade!");
+}
+
 // ---------- init ----------
+applyMagicLink();
 loadSettings();
 updateGradeButton();
 if (!localStorage.getItem("gmc_api_key")) {

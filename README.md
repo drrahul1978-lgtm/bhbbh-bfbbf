@@ -29,6 +29,19 @@ centering, corners, edges and surface, an overall grade with a PSA-style label
 
 Any OpenAI-compatible vision model name can be typed into the model field.
 
+### Sharing with friends & family (magic link)
+
+You can hand someone a pre-configured link so they don't need their own key:
+
+```
+https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/#key=YOUR_API_KEY
+```
+
+The key is saved into their browser and instantly removed from the address bar.
+⚠️ Only share this link privately — anyone who has it can use your key. Never
+commit an API key to this (public) repository: GitHub secret scanning will
+revoke it and scrapers will abuse it.
+
 ## Tips for better grades
 
 - Use bright, even lighting (no glare on the card surface).
