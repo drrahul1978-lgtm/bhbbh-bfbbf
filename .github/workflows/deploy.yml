@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - claude/website-idea-ai-uml90j
+      - claude/js-basics-learning-site-p8ho2h
   workflow_dispatch:
 
 permissions:
@@ -21,11 +21,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Publishes into the js-basics/ subfolder of the gh-pages branch so the
+      # site that lives at the root of gh-pages is left untouched.
       - name: Publish to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
+          destination_dir: js-basics
           exclude_assets: ".github"
           enable_jekyll: false
-          commit_message: "Deploy site"
+          commit_message: "Deploy Kodexa site"

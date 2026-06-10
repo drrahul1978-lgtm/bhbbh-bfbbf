@@ -1,63 +1,41 @@
-# 🃏 GradeMyCard — AI Trading Card Grader
+# ⚡ Kodexa — Learn JavaScript the Duolingo way
 
-Upload a photo of a **Pokémon, football, baseball or basketball card** and get an
-instant, PSA-style AI condition estimate — centering, corners, edges & surface
-subgrades plus an overall 1–10 grade — powered by **Meta's Llama 4 vision model**.
+A free, game-like website for learning the **basics of JavaScript**: bite-size
+lessons, hearts, XP, day streaks, confetti and a winding lesson path — just
+like Duolingo, but for code.
 
-**Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/
+**Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/js-basics/
 
-## How it works
+## What you'll learn
 
-1. Open the site — it works out of the box using the site's built-in shared
-   Groq key (quota is shared by all visitors, so be considerate).
-2. Optional: use your own key instead via **⚙️ API Settings** — **Groq** is
-   recommended (free tier, no credit card):
-   create one at [console.groq.com/keys](https://console.groq.com/keys).
-   Your key is stored **only in your browser's localStorage** and sent directly
-   to the AI provider — there is no backend.
-3. Upload (or drag-drop / paste) a photo of your card and hit **Grade my card**.
+8 units, 16 lessons, ~100 exercises covering the fundamentals:
 
-The Llama 4 Scout vision model inspects the photo and returns subgrades for
-centering, corners, edges and surface, an overall grade with a PSA-style label
-(Gem Mint → Poor), and grader's notes about specific flaws it spotted.
+1. **First Steps** — `console.log`, comments & syntax
+2. **Variables** — `let`, `const`, assignment, naming
+3. **Data Types** — numbers, strings, booleans, `typeof`
+4. **Operators** — math, comparisons (`===`), logic (`&&`, `||`, `!`)
+5. **Conditionals** — `if`, `else`, `else if`
+6. **Loops** — `for`, `while`, `do...while`
+7. **Functions** — declaring, calling, parameters, `return`
+8. **Arrays** — indexes, `length`, `push`/`pop`, `includes`
 
-### Supported providers
+## How it plays
 
-| Provider   | Default model                              | Get a key |
-|------------|--------------------------------------------|-----------|
-| Groq       | `meta-llama/llama-4-scout-17b-16e-instruct`| [console.groq.com/keys](https://console.groq.com/keys) |
-| OpenRouter | `meta-llama/llama-4-scout`                 | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| Together   | `meta-llama/Llama-4-Scout-17B-16E-Instruct`| [api.together.ai](https://api.together.ai/settings/api-keys) |
+- 🗺️ **Lesson path** — lessons unlock one at a time; finish a unit to earn its crown 👑
+- ❤️ **Hearts** — 5 per lesson; a wrong answer costs one, and the question
+  comes back later in the lesson until you get it right
+- ⚡ **XP** — earn XP for every correct answer, finished lesson and perfect run
+- 🔥 **Streak** — practice on consecutive days to grow it
+- 🎮 **4 exercise types** — multiple choice, fill-in-the-blank,
+  type-the-output, and build-the-code token puzzles
 
-Any OpenAI-compatible vision model name can be typed into the model field.
-
-### Sharing with friends & family (magic link)
-
-You can hand someone a pre-configured link so they don't need their own key:
-
-```
-https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/#key=YOUR_API_KEY
-```
-
-The key is saved into their browser and instantly removed from the address bar.
-⚠️ Only share this link privately — anyone who has it can use your key. Never
-commit an API key to this (public) repository: GitHub secret scanning will
-revoke it and scrapers will abuse it.
-
-## Tips for better grades
-
-- Use bright, even lighting (no glare on the card surface).
-- Shoot straight-on so all four borders are visible.
-- Fill the frame with the card and keep it in sharp focus.
-
-## Disclaimer
-
-This is an AI **estimate** from a single photo — for fun and rough triage only.
-It is not a professional grade. For official grading use PSA, BGS, SGC or CGC.
+No account, no backend — progress is saved in your browser's localStorage.
 
 ## Development
 
 It's a plain static site (`index.html`, `style.css`, `app.js`) — no build step.
 Open `index.html` in a browser, or serve it with `python3 -m http.server`.
-Deployment to GitHub Pages happens automatically via the workflow in
-`.github/workflows/deploy.yml`.
+
+Pushes to this branch deploy automatically to the `js-basics/` folder of the
+`gh-pages` branch via `.github/workflows/deploy.yml` (the root of the Pages
+site is used by another project in this repo).
