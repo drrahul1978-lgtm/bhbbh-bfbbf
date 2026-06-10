@@ -5,33 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kodexa — Learn JavaScript the fun way</title>
   <meta name="description" content="Kodexa is a free, Duolingo-style game for learning the basics of JavaScript: bite-size lessons, XP, streaks and hearts. No signup needed." />
+  <meta name="theme-color" content="#131f24" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="logo">⚡ Kod<span>exa</span></div>
-    <div class="stats">
-      <span class="stat" title="Day streak">🔥 <b id="statStreak">0</b></span>
-      <span class="stat" title="Total XP">⚡ <b id="statXp">0</b></span>
-    </div>
-  </header>
-
   <!-- ===== Home / lesson path ===== -->
   <main id="homeScreen">
-    <section class="hero">
-      <h1>Learn <span class="accent">JavaScript</span>,<br />one bite at a time.</h1>
-      <p>Short game-like lessons with XP, streaks and hearts — just like Duolingo, but for code. Your progress is saved in this browser.</p>
-    </section>
+    <header class="statbar">
+      <span class="stat course-badge" title="JavaScript course">JS</span>
+      <span class="stat streak" title="Day streak">🔥 <b id="statStreak">0</b></span>
+      <span class="stat gems" title="Gems">💎 <b id="statGems">0</b></span>
+      <span class="stat xp" title="Total XP">⚡ <b id="statXp">0</b></span>
+    </header>
+
     <div id="path"></div>
-    <footer class="site-footer">
-      <p>Free &amp; open source · No account needed · Progress lives in your browser</p>
-      <button id="resetBtn" class="link-btn">Reset all progress</button>
-    </footer>
+
+    <nav class="bottomnav">
+      <button id="navHome" class="nav-btn active" title="Home">🏠</button>
+      <button id="navTrophy" class="nav-btn" title="Jump to current lesson">🏆</button>
+      <button id="navSettings" class="nav-btn" title="Reset progress">⚙️</button>
+    </nav>
   </main>
 
   <!-- ===== Lesson ===== -->
