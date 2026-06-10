@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kodexa — Learn JavaScript the fun way</title>
+  <meta name="description" content="Kodexa is a free, Duolingo-style game for learning the basics of JavaScript: bite-size lessons, XP, streaks and hearts. No signup needed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo">⚡ Kod<span>exa</span></div>
+    <div class="stats">
+      <span class="stat" title="Day streak">🔥 <b id="statStreak">0</b></span>
+      <span class="stat" title="Total XP">⚡ <b id="statXp">0</b></span>
+    </div>
+  </header>
+
+  <!-- ===== Home / lesson path ===== -->
+  <main id="homeScreen">
+    <section class="hero">
+      <h1>Learn <span class="accent">JavaScript</span>,<br />one bite at a time.</h1>
+      <p>Short game-like lessons with XP, streaks and hearts — just like Duolingo, but for code. Your progress is saved in this browser.</p>
+    </section>
+    <div id="path"></div>
+    <footer class="site-footer">
+      <p>Free &amp; open source · No account needed · Progress lives in your browser</p>
+      <button id="resetBtn" class="link-btn">Reset all progress</button>
+    </footer>
+  </main>
+
+  <!-- ===== Lesson ===== -->
+  <main id="lessonScreen" class="hidden">
+    <div class="lesson-top">
+      <button id="quitBtn" class="icon-btn" title="Quit lesson">✕</button>
+      <div class="progress"><div id="progressFill"></div></div>
+      <span class="lesson-hearts">❤️ <b id="lessonHearts">5</b></span>
+    </div>
+    <div id="exerciseArea"></div>
+    <footer class="lesson-footer" id="lessonFooter">
+      <div id="feedback" class="feedback hidden">
+        <div class="feedback-title" id="feedbackTitle"></div>
+        <div class="feedback-detail" id="feedbackDetail"></div>
+      </div>
+      <button id="checkBtn" class="big-btn" disabled>CHECK</button>
+    </footer>
+  </main>
+
+  <!-- ===== Lesson result ===== -->
+  <main id="resultScreen" class="hidden">
+    <div class="result-card" id="resultCard"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
