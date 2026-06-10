@@ -21,11 +21,15 @@ like Duolingo, but for code.
 
 ## How it plays
 
-- 🗺️ **Lesson path** — lessons unlock one at a time; finish a unit to earn its crown 👑
+- 🗺️ **Winding lesson path** — Duolingo-style dark cartoon UI; lessons unlock
+  one at a time, with a progress ring around the current one
 - ❤️ **Hearts** — 5 per lesson; a wrong answer costs one, and the question
   comes back later in the lesson until you get it right
 - ⚡ **XP** — earn XP for every correct answer, finished lesson and perfect run
+- 💎 **Gems & chests** — finish a unit to unlock its treasure chest
 - 🔥 **Streak** — practice on consecutive days to grow it
+- 🤖 **Kodee the mascot** — cheers you on along the path and when you finish
+  a lesson
 - 🎮 **4 exercise types** — multiple choice, fill-in-the-blank,
   type-the-output, and build-the-code token puzzles
 

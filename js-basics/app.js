@@ -340,10 +340,10 @@ function loadState() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (raw && typeof raw === "object") {
-      return { xp: 0, streak: 0, lastDay: null, completed: {}, ...raw };
+      return { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {}, ...raw };
     }
   } catch (e) { /* corrupted storage — start fresh */ }
-  return { xp: 0, streak: 0, lastDay: null, completed: {}, };
+  return { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {} };
 }
 
 function saveState() {
@@ -391,6 +391,7 @@ function show(screen) {
 
 function renderHeader() {
   $("statStreak").textContent = state.streak;
+  $("statGems").textContent = state.gems;
   $("statXp").textContent = state.xp;
 }
 
@@ -421,27 +422,60 @@ const dingGood = () => playTone([660, 880]);
 const dingBad = () => playTone([220, 165], 0.18);
 
 /* ===================== Home / path ===================== */
+
+/* Kodee, the Kodexa mascot — a cheeky cartoon code-blob. */
+function mascotSVG(color) {
+  return `
+  <svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <line x1="60" y1="22" x2="60" y2="8" stroke="${color}" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="60" cy="7" r="6" fill="#ffc800"/>
+    <path d="M60 22 C 25 22 16 50 16 76 C 16 104 36 118 60 118 C 84 118 104 104 104 76 C 104 50 95 22 60 22 Z" fill="${color}"/>
+    <ellipse cx="60" cy="92" rx="26" ry="17" fill="rgba(255,255,255,0.28)"/>
+    <circle cx="44" cy="62" r="13" fill="#fff"/>
+    <circle cx="76" cy="62" r="13" fill="#fff"/>
+    <circle cx="47" cy="64" r="6" fill="#131f24"/>
+    <circle cx="73" cy="64" r="6" fill="#131f24"/>
+    <circle cx="49" cy="61.5" r="2" fill="#fff"/>
+    <circle cx="75" cy="61.5" r="2" fill="#fff"/>
+    <path d="M50 86 Q 60 95 70 86" stroke="#131f24" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <text x="60" y="106" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="13" fill="rgba(0,0,0,0.45)">&lt;/&gt;</text>
+    <ellipse cx="42" cy="122" rx="11" ry="6" fill="${color}"/>
+    <ellipse cx="78" cy="122" rx="11" ry="6" fill="${color}"/>
+  </svg>`;
+}
+
+/* Winding-path horizontal offset, Duolingo style: 0, 42, 60, 42, 0, -42, -60… */
+function pathOffset(step) {
+  return Math.round(Math.sin((step * Math.PI) / 4) * 60);
+}
+
 function renderHome() {
   renderHeader();
   const path = $("path");
   path.innerHTML = "";
   const currentIdx = firstIncompleteIndex();
   let flatIdx = 0;
+  let step = 0;
 
   UNITS.forEach((unit, u) => {
     const unitDone = unit.lessons.every((_, l) => state.completed[lessonKey(u, l)]);
-    const unitEl = document.createElement("section");
-    unitEl.className = "unit" + (unitDone ? " done" : "");
-    unitEl.innerHTML = `
-      <div class="unit-banner" style="background:${unit.color}">
-        <div>
-          <h2>${escapeHtml(unit.title)}</h2>
-          <p>${escapeHtml(unit.desc)}</p>
-        </div>
-        <div class="unit-crown" title="${unitDone ? "Unit complete!" : "Finish every lesson to earn the crown"}">👑</div>
+    const doneCount = unit.lessons.filter((_, l) => state.completed[lessonKey(u, l)]).length;
+    const unitName = unit.title.split("·").pop().trim();
+
+    const banner = document.createElement("div");
+    banner.className = "unit-banner";
+    banner.style.background = unit.color;
+    banner.style.boxShadow = `0 4px 0 ${unit.colorDark}`;
+    banner.innerHTML = `
+      <div>
+        <div class="ub-label">Section 1, Unit ${u + 1}</div>
+        <h2>${escapeHtml(unitName)}</h2>
       </div>
-      <div class="unit-path"></div>`;
-    const pathEl = unitEl.querySelector(".unit-path");
+      <div class="ub-book" title="${escapeHtml(unit.desc)}">📖</div>`;
+    path.appendChild(banner);
+
+    const pathEl = document.createElement("div");
+    pathEl.className = "unit-path";
 
     unit.lessons.forEach((lesson, l) => {
       const key = lessonKey(u, l);
@@ -450,30 +484,97 @@ function renderHome() {
       const locked = !done && !isCurrent;
 
       const wrap = document.createElement("div");
-      wrap.className = "node-wrap";
-      if (isCurrent) {
-        const pill = document.createElement("div");
-        pill.className = "start-pill";
-        pill.textContent = "START";
-        wrap.appendChild(pill);
-      }
+      wrap.className = "node-wrap" + (isCurrent ? " active" : "");
+      wrap.style.transform = `translateX(${pathOffset(step)}px)`;
+
       const btn = document.createElement("button");
-      btn.className = "node" + (done ? " done" : locked ? " locked" : " current");
-      btn.style.setProperty("--unit-color", unit.color);
-      btn.style.setProperty("--unit-color-dark", unit.colorDark);
+      btn.className = "node" + (done ? " done" : locked ? " locked" : "");
+      btn.style.setProperty("--node-c", unit.color);
+      btn.style.setProperty("--node-cd", unit.colorDark);
       btn.disabled = locked;
-      btn.textContent = done ? "✓" : locked ? "🔒" : unit.icon;
+      btn.innerHTML = `<span class="star">${done ? "✓" : "★"}</span>`;
       btn.title = lesson.title;
       btn.addEventListener("click", () => startLesson(u, l));
+
+      if (isCurrent) {
+        const tip = document.createElement("div");
+        tip.className = "start-tip";
+        tip.style.setProperty("--node-c", unit.color);
+        tip.textContent = "START";
+        wrap.appendChild(tip);
+
+        const ring = document.createElement("div");
+        ring.className = "ring";
+        ring.style.setProperty("--node-c", unit.color);
+        ring.style.setProperty("--ring-pct", `${Math.max(8, (doneCount / unit.lessons.length) * 100)}%`);
+        ring.appendChild(btn);
+        wrap.appendChild(ring);
+      } else {
+        wrap.appendChild(btn);
+      }
+
       const label = document.createElement("div");
       label.className = "node-label";
       label.textContent = lesson.title;
-      wrap.append(btn, label);
+      wrap.appendChild(label);
       pathEl.appendChild(wrap);
       flatIdx++;
+      step++;
     });
 
-    path.appendChild(unitEl);
+    // Treasure chest reward at the end of each unit
+    const claimed = !!state.chests[u];
+    const chestWrap = document.createElement("div");
+    chestWrap.className = "node-wrap";
+    chestWrap.style.transform = `translateX(${pathOffset(step)}px)`;
+    const chest = document.createElement("button");
+    chest.className = "chest" + (unitDone ? (claimed ? " claimed" : " claimable") : "");
+    chest.textContent = "🎁";
+    chest.title = claimed ? "Already claimed" : unitDone ? "Claim your gems!" : "Finish the unit to unlock";
+    chest.disabled = !unitDone || claimed;
+    if (unitDone && !claimed) {
+      chest.addEventListener("click", () => {
+        state.gems += 20;
+        state.chests[u] = true;
+        saveState();
+        playTone([523, 659, 784], 0.13);
+        renderHome();
+      });
+      const pill = document.createElement("div");
+      pill.className = "claim-pill";
+      pill.textContent = "CLAIM 💎 20";
+      chestWrap.append(chest, pill);
+    } else {
+      chestWrap.appendChild(chest);
+    }
+    pathEl.appendChild(chestWrap);
+    step++;
+
+    // Mascot hanging out beside the path, greyed out until the unit is beaten
+    const mascot = document.createElement("div");
+    mascot.className = "mascot " + (u % 2 ? "left" : "right") + (unitDone ? "" : " dim");
+    mascot.style.top = "30%";
+    mascot.innerHTML = mascotSVG(unit.color) + `<div class="mstars">${unitDone ? "⭐⭐⭐" : "★ ★ ★"}</div>`;
+    pathEl.appendChild(mascot);
+
+    // Grand trophy at the very end of the course
+    if (u === UNITS.length - 1) {
+      const allDone = flatLessons().every((k) => state.completed[k]);
+      const tWrap = document.createElement("div");
+      tWrap.className = "node-wrap";
+      tWrap.style.transform = `translateX(${pathOffset(step)}px)`;
+      const trophy = document.createElement("div");
+      trophy.className = "trophy-node" + (allDone ? " won" : "");
+      trophy.textContent = "🏆";
+      trophy.title = allDone ? "JavaScript basics: conquered!" : "Finish every lesson to win the trophy";
+      const tLabel = document.createElement("div");
+      tLabel.className = "node-label";
+      tLabel.textContent = allDone ? "You did it!" : "Course trophy";
+      tWrap.append(trophy, tLabel);
+      pathEl.appendChild(tWrap);
+    }
+
+    path.appendChild(pathEl);
   });
 }
 
@@ -765,7 +866,7 @@ function endLesson(passed) {
     const accuracy = Math.round((lesson.total / (lesson.total + lesson.mistakes)) * 100);
 
     card.innerHTML = `
-      <div class="result-emoji">${perfect ? "🏆" : "🎉"}</div>
+      <div class="result-mascot">${mascotSVG(UNITS[lesson.u].color)}</div>
       <h1>${perfect ? "Perfect lesson!" : "Lesson complete!"}</h1>
       <p>${escapeHtml(UNITS[lesson.u].lessons[lesson.l].title)} · ${escapeHtml(UNITS[lesson.u].title)}</p>
       <div class="result-stats">
@@ -812,12 +913,20 @@ function confetti() {
   }
 }
 
-/* ===================== Reset ===================== */
-$("resetBtn").addEventListener("click", () => {
-  if (confirm("Reset ALL progress (XP, streak and completed lessons)?")) {
+/* ===================== Bottom nav ===================== */
+$("navHome").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+$("navTrophy").addEventListener("click", () => {
+  const current = document.querySelector(".node-wrap.active");
+  if (current) current.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+$("navSettings").addEventListener("click", () => {
+  if (confirm("Reset ALL progress (XP, gems, streak and completed lessons)?")) {
     localStorage.removeItem(STORAGE_KEY);
     state = loadState();
     renderHome();
+    window.scrollTo(0, 0);
   }
 });
 
