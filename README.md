@@ -8,12 +8,14 @@ subgrades plus an overall 1–10 grade — powered by **Meta's Llama 4 vision mo
 
 ## How it works
 
-1. Open the site and click **⚙️ API Settings**.
-2. Pick a provider — **Groq** is recommended (free tier, no credit card):
-   create a key at [console.groq.com/keys](https://console.groq.com/keys).
-3. Paste your API key and save. The key is stored **only in your browser's
-   localStorage** and is sent directly to the AI provider — there is no backend.
-4. Upload (or drag-drop / paste) a photo of your card and hit **Grade my card**.
+1. Open the site — it works out of the box using the site's built-in shared
+   Groq key (quota is shared by all visitors, so be considerate).
+2. Optional: use your own key instead via **⚙️ API Settings** — **Groq** is
+   recommended (free tier, no credit card):
+   create one at [console.groq.com/keys](https://console.groq.com/keys).
+   Your key is stored **only in your browser's localStorage** and sent directly
+   to the AI provider — there is no backend.
+3. Upload (or drag-drop / paste) a photo of your card and hit **Grade my card**.
 
 The Llama 4 Scout vision model inspects the photo and returns subgrades for
 centering, corners, edges and surface, an overall grade with a PSA-style label
