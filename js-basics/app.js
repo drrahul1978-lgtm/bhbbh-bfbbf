@@ -767,6 +767,34 @@ function gradeCode(ex, value) {
   return [ex.a, ...(ex.alt || [])].some((v) => normalizeCode(v, ex.ci) === normalizeCode(value, ex.ci));
 }
 
+/* AI tutor: explains the specific mistake in a wrong code answer. */
+async function requestAiNote(ex, typed, lang, container) {
+  if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) return;
+  const el = document.createElement("div");
+  el.className = "ai-note";
+  el.textContent = "🤖 checking your code…";
+  container.appendChild(el);
+  try {
+    const res = await fetch(AI_FEEDBACK.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+      body: JSON.stringify({
+        model: AI_FEEDBACK.model,
+        temperature: 0.2,
+        max_tokens: 70,
+        messages: [
+          { role: "system", content: "You are a friendly coding tutor for beginners. In ONE short sentence (max 25 words), state the specific mistake in the student's code compared to the expected answer. No greetings, no code blocks, no quotes around the sentence." },
+          { role: "user", content: `Language: ${lang}\nTask: ${ex.q}\nExpected answer: ${ex.a}\nStudent wrote: ${typed}` },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const msg = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (msg && msg.trim()) el.textContent = "🤖 " + msg.trim();
+    else el.remove();
+  } catch (e) { el.remove(); }
+}
+
 /* --- write real code with your keyboard --- */
 function renderCode(ex, area, setAnswer, onReady, onNotReady) {
   const editor = document.createElement("div");
@@ -793,7 +821,7 @@ function renderCode(ex, area, setAnswer, onReady, onNotReady) {
   area.appendChild(hint);
   setTimeout(() => input.focus(), 60);
 
-  setAnswer(() => ({ ok: gradeCode(ex, input.value), correctText: ex.a }));
+  setAnswer(() => ({ ok: gradeCode(ex, input.value), correctText: ex.a, typed: input.value }));
 }
 
 function renderType(ex, area, setAnswer, onReady, onNotReady) {
@@ -822,7 +850,7 @@ $("checkBtn").addEventListener("click", () => {
   if (!lesson) return;
   if (lesson.checked) { nextExercise(); return; }
 
-  const { ok, correctText } = lesson.getAnswer();
+  const { ok, correctText, typed } = lesson.getAnswer();
   lesson.checked = true;
   const ex = lesson.queue.shift();
   const fb = $("feedback");
@@ -845,6 +873,9 @@ $("checkBtn").addEventListener("click", () => {
     fb.className = "feedback bad";
     $("feedbackTitle").textContent = "Not quite…";
     $("feedbackDetail").innerHTML = `Correct answer: <code>${escapeHtml(correctText)}</code>`;
+    if (ex.t === "code" && typeof typed === "string" && typed.trim()) {
+      requestAiNote(ex, typed, activeCourse.name, $("feedbackDetail"));
+    }
     btn.className = "big-btn bad";
     const hearts = document.querySelector(".lesson-hearts");
     hearts.classList.remove("lost");
@@ -1091,6 +1122,7 @@ function buildFeedCard(ex, course) {
         ? gradeCode(ex, input.value)
         : [ex.a, ...(ex.alt || [])].map(normalizeTyped).includes(normalizeTyped(input.value));
       grade(ok, ex.a);
+      if (!ok && isCode) requestAiNote(ex, input.value, course.name, fbEl);
     };
     check.addEventListener("click", doCheck);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") doCheck(); });
