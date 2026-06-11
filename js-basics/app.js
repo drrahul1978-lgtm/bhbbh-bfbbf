@@ -599,6 +599,7 @@ function renderExercise(ex, area, setAnswer, onReady, onNotReady) {
   else if (ex.t === "fill") renderFill(ex, area, setAnswer, onReady, onNotReady);
   else if (ex.t === "order") renderOrder(ex, area, setAnswer, onReady, onNotReady);
   else if (ex.t === "type") renderType(ex, area, setAnswer, onReady, onNotReady);
+  else if (ex.t === "code") renderCode(ex, area, setAnswer, onReady, onNotReady);
 }
 
 function addCode(area, code) {
@@ -748,6 +749,53 @@ function renderOrder(ex, area, setAnswer, onReady, onNotReady) {
 
 const normalizeTyped = (s) => s.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/;$/, "");
 
+/* Forgiving code comparison: fixes phone smart-quotes, ignores spacing,
+ * quote style and a trailing semicolon — but stays case-sensitive
+ * (except when the exercise sets ci, e.g. SQL keywords). */
+function normalizeCode(s, ci) {
+  let t = String(s)
+    .replace(/[‘’ʼ]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, "")
+    .replace(/'/g, '"')
+    .replace(/;+$/, "");
+  if (ci) t = t.toLowerCase();
+  return t;
+}
+
+function gradeCode(ex, value) {
+  return [ex.a, ...(ex.alt || [])].some((v) => normalizeCode(v, ex.ci) === normalizeCode(value, ex.ci));
+}
+
+/* --- write real code with your keyboard --- */
+function renderCode(ex, area, setAnswer, onReady, onNotReady) {
+  const editor = document.createElement("div");
+  editor.className = "code-editor";
+  const gutter = document.createElement("span");
+  gutter.className = "gutter";
+  gutter.textContent = "1";
+  const input = document.createElement("input");
+  input.className = "code-input";
+  input.placeholder = "type the code here…";
+  input.autocapitalize = "off";
+  input.autocomplete = "off";
+  input.setAttribute("autocorrect", "off");
+  input.spellcheck = false;
+  input.addEventListener("input", () => (input.value.trim() ? onReady() : onNotReady()));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !$("checkBtn").disabled && !$("lessonScreen").classList.contains("hidden")) $("checkBtn").click();
+  });
+  editor.append(gutter, input);
+  area.appendChild(editor);
+  const hint = document.createElement("p");
+  hint.className = "code-hint";
+  hint.textContent = "Spacing, quote style and a trailing ; are forgiven — the rest is on you 😉";
+  area.appendChild(hint);
+  setTimeout(() => input.focus(), 60);
+
+  setAnswer(() => ({ ok: gradeCode(ex, input.value), correctText: ex.a }));
+}
+
 function renderType(ex, area, setAnswer, onReady, onNotReady) {
   addCode(area, ex.code);
   const input = document.createElement("input");
@@ -892,7 +940,7 @@ function buildFeedPool(filterId) {
   COURSES.forEach((course) => {
     if (filterId !== "all" && course.id !== filterId) return;
     course.units.forEach((u) => u.lessons.forEach((l) => l.exercises.forEach((ex) => {
-      if (ex.t === "mc" || ex.t === "fill" || ex.t === "type") feedPool.push({ ex, course });
+      if (ex.t === "mc" || ex.t === "fill" || ex.t === "type" || ex.t === "code") feedPool.push({ ex, course });
     })));
   });
 }
@@ -1021,12 +1069,14 @@ function buildFeedCard(ex, course) {
       return b;
     });
     cardEl.appendChild(list);
-  } else { // type
+  } else { // type the output, or write real code
+    const isCode = ex.t === "code";
     const input = document.createElement("input");
-    input.className = "type-input";
-    input.placeholder = "Type your answer…";
+    input.className = isCode ? "code-input" : "type-input";
+    input.placeholder = isCode ? "type the code here…" : "Type your answer…";
     input.autocapitalize = "off";
     input.autocomplete = "off";
+    input.setAttribute("autocorrect", "off");
     input.spellcheck = false;
     const check = document.createElement("button");
     check.className = "big-btn fc-check";
@@ -1037,12 +1087,22 @@ function buildFeedCard(ex, course) {
       graded = true;
       input.disabled = true;
       check.disabled = true;
-      const accepted = [ex.a, ...(ex.alt || [])].map(normalizeTyped);
-      grade(accepted.includes(normalizeTyped(input.value)), ex.a);
+      const ok = isCode
+        ? gradeCode(ex, input.value)
+        : [ex.a, ...(ex.alt || [])].map(normalizeTyped).includes(normalizeTyped(input.value));
+      grade(ok, ex.a);
     };
     check.addEventListener("click", doCheck);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") doCheck(); });
-    cardEl.append(input, check);
+    if (isCode) {
+      const editor = document.createElement("div");
+      editor.className = "code-editor";
+      editor.innerHTML = '<span class="gutter">1</span>';
+      editor.appendChild(input);
+      cardEl.append(editor, check);
+    } else {
+      cardEl.append(input, check);
+    }
   }
 
   cardEl.appendChild(fbEl);
