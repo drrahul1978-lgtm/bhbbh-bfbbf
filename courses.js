@@ -18,6 +18,7 @@ const mc = (q, code, choices) => ({ t: "mc", q, ...(code ? { code } : {}), choic
 const fill = (q, code, choices) => ({ t: "fill", q, code, choices, a: 0 });
 const order = (q, tokens) => ({ t: "order", q, tokens });
 const typeEx = (q, code, a) => ({ t: "type", q, ...(code ? { code } : {}), a });
+const codeEx = (q, a, alt, extra) => ({ t: "code", q, a, ...(alt ? { alt } : {}), ...(extra || {}) });
 
 /* Questions that are true in (almost) every language */
 const G = {
@@ -116,6 +117,7 @@ function buildCourse(meta, g, x) {
             g.printTokens ? order('Build the code: print "Hi"', g.printTokens) : null,
             fill("Fill in the blank to print a message", g.printFill.code, g.printFill.choices),
             typeEx("Type the output of this code", g.hello.code, g.hello.ans),
+            codeEx(`⌨️ Your turn — write the ${N} code that prints: Hello, World!`, g.hello.code),
           ].filter(Boolean),
         },
         {
@@ -174,7 +176,8 @@ function buildCourse(meta, g, x) {
             mc(g.concat.q, g.concat.code || null, g.concat.choices),
             G.concatTerm(),
             mc('How many characters? What is the output?', x.strLen.code, ["4", "3", "5", "Error"]),
-            typeEx("Type the output of this code", g.hello.code, g.hello.ans),
+            codeEx('⌨️ Your turn — write the code that prints: Good morning',
+              g.printFill.code.replace("___", g.printFill.choices[0])),
           ],
         },
       ],
@@ -200,6 +203,7 @@ function buildCourse(meta, g, x) {
             mc("What is the output?", x.wrap(`8 ${x.modOp} 3`), ["2", "1", "3", "0"]),
             mc("What is the output?", x.wrap("(2 + 3) * 2"), ["10", "12", "7", "8"]),
             typeEx("Type the output of this code", x.wrap("5 * 5"), "25"),
+            codeEx("⌨️ Your turn — write ONE line that prints the result of 4 * 5", x.mul.code, [x.wrap("20")]),
           ],
         },
         {
@@ -341,6 +345,7 @@ const JS_UNITS = [
           mc("What is the output?", "console.log(123);", ["123", '"123"', "console", "Nothing"]),
           fill("Fill in the blank to print a message", '___("Good morning");', ["console.log", "print", "echo"]),
           typeEx("Type the output of this code", "console.log(5);", "5"),
+          codeEx("⌨️ Your turn — write the JavaScript that prints: Hello, World!", 'console.log("Hello, World!");'),
           mc("Where can JavaScript run?", null,
             ["In browsers and on servers (Node.js)", "Only inside Microsoft Word", "Only on phones", "Only on calculators"]),
         ],
@@ -371,6 +376,7 @@ const JS_UNITS = [
           fill("Fill in the blank to assign a value", 'let name ___ "Ada";', ["=", "==", "=>"]),
           mc("What is the output?", "let score = 10;\nconsole.log(score);", ["10", "score", '"score"', "undefined"]),
           typeEx("Type the output of this code", "let x = 7;\nconsole.log(x);", "7"),
+          codeEx("⌨️ Your turn — declare a variable called age holding 13 (use let)", "let age = 13;"),
           mc("Which is a valid variable name?", null, ["myScore", "2cool", "my-score", "let"]),
         ],
       },
@@ -527,6 +533,7 @@ const JS_UNITS = [
           mc("What does the return keyword do?", null,
             ["Sends a value back and ends the function", "Prints a value", "Restarts the function", "Deletes the function"]),
           typeEx("Type the output of this code", "function double(n) {\n  return n * 2;\n}\nconsole.log(double(5));", "10"),
+          codeEx("⌨️ Your turn — write the line that sends a + b back to the caller", "return a + b;"),
           fill("Send the sum back to the caller", "function add(a, b) {\n  ___ a + b;\n}", ["return", "give", "console.log"]),
           mc("What is the output?", "function add(a, b) {\n  return a + b;\n}\nconsole.log(add(2, 3));", ["5", "23", "a + b", "undefined"]),
           order("Build the code: return a times b", ["return", "a", "*", "b", ";"]),
@@ -581,6 +588,7 @@ const HTML_UNITS = [
           mc("Which tag makes the BIGGEST heading?", null, ["<h1>", "<h6>", "<head>", "<big>"]),
           order('Build a heading that says Hello', ["<h1>", "Hello", "</h1>"]),
           fill("Make this a paragraph", "<___>This is a paragraph</p>", ["p", "par", "text"]),
+          codeEx("⌨️ Your turn — write the HTML for a big heading that says Hello", "<h1>Hello</h1>"),
           mc("Most HTML elements need an opening tag and a…", null,
             ["closing tag like </p>", "semicolon", "second opening tag", "password"]),
         ],
@@ -669,6 +677,7 @@ const CSS_UNITS = [
           fill("Make every heading red", "h1 {\n  color: ___;\n}", ["red", '"red"', "#red"]),
           mc('Which selector targets class="card"?', null, [".card", "#card", "card()", "<card>"]),
           mc('Which selector targets id="menu"?', null, ["#menu", ".menu", "menu()", "*menu"]),
+          codeEx("⌨️ Your turn — write the declaration that makes text red", "color: red;"),
           order("Build the rule: make h1 blue", ["h1", "{", "color", ":", "blue", ";", "}"]),
         ],
       },
@@ -760,6 +769,7 @@ const SQL_UNITS = [
           mc("In SELECT name FROM users, what is users?", null,
             ["The table to read from", "A column", "A password", "A function"]),
           typeEx("Which keyword fetches data? (type it)", "___ name FROM users;", "SELECT"),
+          codeEx("⌨️ Your turn — write the query that gets ALL columns from the users table", "SELECT * FROM users;", null, { ci: true }),
         ],
       },
       {
