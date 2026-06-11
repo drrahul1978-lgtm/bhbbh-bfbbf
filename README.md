@@ -1,45 +1,49 @@
-# ⚡ Kodexa — Learn JavaScript the Duolingo way
+# ⚡ Kodexa — a game-like academy for learning to code
 
-A free, game-like website for learning the **basics of JavaScript**: bite-size
-lessons, hearts, XP, day streaks, confetti and a winding lesson path — just
-like Duolingo, but for code.
+Learn **21 programming languages** through bite-size lessons, hearts, XP,
+streaks and an endless swipe-style practice feed.
 
 **Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/js-basics/
 
-## What you'll learn
+## The 21 courses
 
-8 units, 16 lessons, ~100 exercises covering the fundamentals:
+JavaScript (flagship, hand-written) · Python · HTML · CSS · SQL · TypeScript ·
+Java · C# · C++ · C · Go · Rust · PHP · Ruby · Swift · Kotlin · Dart · Bash ·
+Lua · R · Perl
 
-1. **First Steps** — `console.log`, comments & syntax
-2. **Variables** — `let`, `const`, assignment, naming
-3. **Data Types** — numbers, strings, booleans, `typeof`
-4. **Operators** — math, comparisons (`===`), logic (`&&`, `||`, `!`)
-5. **Conditionals** — `if`, `else`, `else if`
-6. **Loops** — `for`, `while`, `do...while`
-7. **Functions** — declaring, calling, parameters, `return`
-8. **Arrays** — indexes, `length`, `push`/`pop`, `includes`
+Every language course has **10 units** (First Steps, Variables, Types & Text,
+Math & Operators, Conditionals, Loops, Functions, Collections, Review and a
+Mastery exam) — about **1,750 exercises** in total, each written in that
+language's real syntax.
 
-## How it plays
+## Features
 
-- 🗺️ **Winding lesson path** — Duolingo-style dark cartoon UI; lessons unlock
-  one at a time, with a progress ring around the current one
-- ❤️ **Hearts** — 5 per lesson; a wrong answer costs one, and the question
-  comes back later in the lesson until you get it right
-- ⚡ **XP** — earn XP for every correct answer, finished lesson and perfect run
-- 💎 **Gems & chests** — finish a unit to unlock its treasure chest
-- 🔥 **Streak** — practice on consecutive days to grow it
-- 🤖 **Kodee the mascot** — cheers you on along the path and when you finish
-  a lesson
-- 🎮 **4 exercise types** — multiple choice, fill-in-the-blank,
-  type-the-output, and build-the-code token puzzles
-
-No account, no backend — progress is saved in your browser's localStorage.
+- 🔐 **Welcome screen** — continue with Apple / Google / email or as a guest.
+  Sign-in is simulated: the profile (and all progress) is stored only in your
+  browser's localStorage; nothing is ever sent to a server.
+- 📚 **Learn tab** — course catalog with per-course progress, unit lists,
+  linear lesson unlocking and treasure chests that pay out gems 💎.
+- ♾️ **Practice tab** — an endless, full-screen scrolling feed of questions
+  (like the Duolingo quick-quiz reel): answer inline, build a combo, swipe
+  down for the next card. Filter by language or mix all 21.
+- ❤️ **Hearts** — 5 per lesson; wrong answers cost one and the question
+  returns later in the lesson until you get it right.
+- ⚡ **XP, 🔥 day streaks, 🎯 accuracy** and a confetti celebration with
+  Kodee, the mascot.
+- 🎮 **4 exercise types** — multiple choice, fill-in-the-blank chips,
+  type-the-output, and build-the-code token puzzles.
 
 ## Development
 
-It's a plain static site (`index.html`, `style.css`, `app.js`) — no build step.
-Open `index.html` in a browser, or serve it with `python3 -m http.server`.
+Plain static site — no build step, no backend:
 
-Pushes to this branch deploy automatically to the `js-basics/` folder of the
+- `index.html` — app shell (auth, catalog, course, lesson, practice screens)
+- `style.css` — dark "code academy" theme
+- `courses.js` — the full course catalog; 17 languages are generated from
+  per-language syntax specs, JS/HTML/CSS/SQL are hand-written
+- `app.js` — game engine, practice feed, profile & progress
+
+Open `index.html` in a browser, or serve with `python3 -m http.server`.
+Pushes to this branch auto-deploy to the `js-basics/` folder of the
 `gh-pages` branch via `.github/workflows/deploy.yml` (the root of the Pages
 site is used by another project in this repo).
