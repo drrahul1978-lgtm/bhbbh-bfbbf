@@ -100,10 +100,38 @@
     <div id="feed"></div>
   </main>
 
+  <!-- ===== Targeted practice (built from your mistakes) ===== -->
+  <main id="targetScreen" class="hidden">
+    <div class="target-top">
+      <div>
+        <h2>🎯 Targeted Practice</h2>
+        <p id="targetCount">Built from your mistakes</p>
+      </div>
+      <button id="analyzeBtn" class="analyze-btn">🤖 Analyze</button>
+    </div>
+    <div id="analysisPanel" class="analysis hidden"></div>
+    <div id="targetFeed"></div>
+  </main>
+
+  <!-- ===== AI coach chat ===== -->
+  <main id="coachScreen" class="hidden">
+    <div class="coach-top">
+      <h2>🤖 Kodexa Coach</h2>
+      <p>Ask anything about code — syntax, errors, ideas</p>
+    </div>
+    <div id="chatLog"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" placeholder="Ask the coach anything…" autocomplete="off" />
+      <button type="submit" class="chat-send" title="Send">➤</button>
+    </form>
+  </main>
+
   <!-- ===== Bottom nav ===== -->
   <nav class="bottomnav hidden" id="bottomnav">
     <button id="navLearn" class="nav-btn active"><span>📚</span>Learn</button>
     <button id="navPractice" class="nav-btn"><span>♾️</span>Practice</button>
+    <button id="navTarget" class="nav-btn"><span>🎯</span>Target</button>
+    <button id="navCoach" class="nav-btn"><span>🤖</span>Coach</button>
     <button id="navProfile" class="nav-btn"><span>👤</span>Profile</button>
   </nav>
 

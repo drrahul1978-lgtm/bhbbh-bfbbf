@@ -20,7 +20,7 @@ let activeCourse = null;
 function loadState() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { /* fresh start */ }
-  const s = { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {}, ...(raw || {}) };
+  const s = { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {}, mistakes: {}, ...(raw || {}) };
   // migrate v1 progress (JS-only course, keys like "0-1")
   try {
     const v1 = JSON.parse(localStorage.getItem("kodexa-v1"));
@@ -64,6 +64,7 @@ function mergeStates(a, b) {
   merged.lastDay = [a.lastDay, b.lastDay].filter(Boolean).sort().pop() || null;
   merged.completed = { ...(b.completed || {}), ...(a.completed || {}) };
   merged.chests = { ...(b.chests || {}), ...(a.chests || {}) };
+  merged.mistakes = { ...(b.mistakes || {}), ...(a.mistakes || {}) };
   return merged;
 }
 
@@ -181,7 +182,8 @@ function firstIncompleteIndex(course) {
 
 /* ===================== DOM helpers ===================== */
 const $ = (id) => document.getElementById(id);
-const SCREENS = ["authScreen", "homeScreen", "courseScreen", "lessonScreen", "resultScreen", "practiceScreen"];
+const SCREENS = ["authScreen", "homeScreen", "courseScreen", "lessonScreen", "resultScreen", "practiceScreen", "targetScreen", "coachScreen"];
+const FULLSCREEN_TABS = ["lessonScreen", "practiceScreen", "targetScreen", "coachScreen"];
 
 function show(id) {
   SCREENS.forEach((s) => $(s).classList.toggle("hidden", s !== id));
@@ -190,11 +192,54 @@ function show(id) {
   void el.offsetWidth; // restart the entrance animation
   el.classList.add("screen-anim");
   const inApp = id !== "authScreen";
-  $("topbar").classList.toggle("hidden", !inApp || id === "lessonScreen" || id === "practiceScreen");
+  $("topbar").classList.toggle("hidden", !inApp || FULLSCREEN_TABS.includes(id));
   $("bottomnav").classList.toggle("hidden", !inApp || id === "lessonScreen" || id === "resultScreen");
   $("navLearn").classList.toggle("active", id === "homeScreen" || id === "courseScreen");
   $("navPractice").classList.toggle("active", id === "practiceScreen");
-  if (id !== "practiceScreen") window.scrollTo(0, 0);
+  $("navTarget").classList.toggle("active", id === "targetScreen");
+  $("navCoach").classList.toggle("active", id === "coachScreen");
+  if (id !== "practiceScreen" && id !== "targetScreen") window.scrollTo(0, 0);
+}
+
+/* ===================== Mistake tracking (feeds Targeted Practice) ===================== */
+const TRACKABLE = ["mc", "fill", "type", "code"];
+const mistakeKey = (courseId, ex) => courseId + "|" + ex.q + "|" + (ex.code || "");
+
+function recordMistake(ex, courseId) {
+  if (!TRACKABLE.includes(ex.t)) return;
+  const k = mistakeKey(courseId, ex);
+  const m = state.mistakes[k] || { c: 0, t: 0 };
+  m.c = Math.min(m.c + 1, 9);
+  m.t = Date.now();
+  state.mistakes[k] = m;
+  const keys = Object.keys(state.mistakes);
+  if (keys.length > 80) { // keep the most recent 80 weak spots
+    keys.sort((a, b) => state.mistakes[a].t - state.mistakes[b].t);
+    delete state.mistakes[keys[0]];
+  }
+  saveState();
+}
+
+function clearMistake(ex, courseId) {
+  const k = mistakeKey(courseId, ex);
+  const m = state.mistakes[k];
+  if (!m) return;
+  m.c--;
+  if (m.c <= 0) {
+    delete state.mistakes[k];
+    showToast("🎯 <b>Weak spot cleared!</b> Nice comeback!");
+  }
+  saveState();
+}
+
+function weakSpots() {
+  const out = [];
+  COURSES.forEach((course) => course.units.forEach((u) => u.lessons.forEach((l) => l.exercises.forEach((ex) => {
+    const m = state.mistakes[mistakeKey(course.id, ex)];
+    if (m && TRACKABLE.includes(ex.t) && !out.some((w) => w.ex === ex)) out.push({ ex, course, count: m.c });
+  }))));
+  out.sort((a, b) => b.count - a.count);
+  return out;
 }
 
 function escapeHtml(s) {
@@ -860,6 +905,7 @@ $("checkBtn").addEventListener("click", () => {
 
   if (ok) {
     lesson.correct++;
+    clearMistake(ex, lesson.cid);
     addXp(XP_PER_CORRECT, btn);
     fb.className = "feedback good";
     $("feedbackTitle").textContent = ["Nice!", "Correct!", "Great job!", "Nailed it!"][Math.floor(Math.random() * 4)];
@@ -869,6 +915,7 @@ $("checkBtn").addEventListener("click", () => {
   } else {
     lesson.mistakes++;
     lesson.hearts--;
+    recordMistake(ex, lesson.cid);
     lesson.queue.push(ex); // missed questions come back later in the lesson
     fb.className = "feedback bad";
     $("feedbackTitle").textContent = "Not quite…";
@@ -1047,6 +1094,7 @@ function buildFeedCard(ex, course) {
     if (ok) {
       feedCorrect++;
       feedCombo++;
+      clearMistake(ex, course.id);
       addXp(XP_PER_CORRECT);
       bumpStreak();
       saveState();
@@ -1055,6 +1103,7 @@ function buildFeedCard(ex, course) {
       else dingGood();
     } else {
       feedCombo = 0;
+      recordMistake(ex, course.id);
       dingBad();
     }
     renderFeedScore();
@@ -1141,6 +1190,144 @@ function buildFeedCard(ex, course) {
   return cardEl;
 }
 
+/* ===================== Targeted practice ===================== */
+function renderTarget() {
+  const spots = weakSpots();
+  $("targetCount").textContent = spots.length
+    ? `${spots.length} weak spot${spots.length === 1 ? "" : "s"} — answer them right to clear them`
+    : "Built from your mistakes";
+  $("analysisPanel").classList.add("hidden");
+  const feed = $("targetFeed");
+  feed.innerHTML = "";
+  if (!spots.length) {
+    feed.innerHTML = `
+      <div class="target-empty">
+        <div class="result-emoji">🏖️</div>
+        <h3>No weak spots!</h3>
+        <p>Every question you miss in lessons or practice lands here so you can crush it on the rematch.</p>
+      </div>`;
+    return;
+  }
+  spots.forEach(({ ex, course }) => feed.appendChild(buildFeedCard(ex, course)));
+}
+
+$("analyzeBtn").addEventListener("click", async () => {
+  const panel = $("analysisPanel");
+  panel.classList.remove("hidden");
+  if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) {
+    panel.textContent = "AI isn't configured (see ai-config.js).";
+    return;
+  }
+  const spots = weakSpots();
+  if (!spots.length) {
+    panel.textContent = "🤖 Nothing to analyze — you have no recorded mistakes. Go make some! 😄";
+    return;
+  }
+  panel.textContent = "🤖 Analyzing your mistakes…";
+  const list = spots.slice(0, 12).map((w) => `- [${w.course.name}] ${w.ex.q} (missed ${w.count}×)`).join("\n");
+  try {
+    const res = await fetch(AI_FEEDBACK.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+      body: JSON.stringify({
+        model: AI_FEEDBACK.model,
+        temperature: 0.4,
+        max_tokens: 160,
+        messages: [
+          { role: "system", content: "You are a coding tutor. Given a student's missed questions, write 2-3 short sentences: name the topic patterns they struggle with and give ONE concrete tip. Speak directly to the student. No lists, no headings." },
+          { role: "user", content: "My missed questions:\n" + list },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const msg = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    panel.textContent = msg ? "🤖 " + msg.trim() : "Couldn't analyze right now — try again in a minute.";
+  } catch (e) {
+    panel.textContent = "Couldn't reach the AI right now — try again in a minute.";
+  }
+});
+
+/* ===================== AI coach chat ===================== */
+const chatHistory = [];
+
+function mdLite(s) {
+  let t = escapeHtml(s);
+  t = t.replace(/```[a-z]*\n?([\s\S]*?)```/g, (_, code) => `<pre>${code.trim()}</pre>`);
+  t = t.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+  return t.replace(/\n/g, "<br>");
+}
+
+function addMsg(who, html) {
+  const log = $("chatLog");
+  const el = document.createElement("div");
+  el.className = "msg " + who;
+  el.innerHTML = html;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+function coachSystemPrompt() {
+  const spots = weakSpots().slice(0, 5).map((w) => `[${w.course.name}] ${w.ex.q}`).join("; ");
+  const name = profile && profile.name !== "Guest" ? profile.name : "the student";
+  return `You are Kodexa Coach, a friendly, encouraging tutor inside a code-learning app that teaches 29 programming languages. You are talking to ${name} (level ${levelProgress(state.xp).lvl}, ${state.xp} XP, ${state.streak}-day streak). ${spots ? "Their recent weak spots: " + spots + "." : ""} Answer beginner questions about programming clearly and briefly (under 120 words). Use short code examples in backticks when helpful. Stay on the topic of coding and learning to code.`;
+}
+
+let coachBusy = false;
+async function coachSend(text) {
+  if (coachBusy) return;
+  if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) {
+    addMsg("ai", "AI isn't configured (see ai-config.js).");
+    return;
+  }
+  coachBusy = true;
+  chatHistory.push({ role: "user", content: text });
+  addMsg("user", escapeHtml(text));
+  const typing = addMsg("ai", '<span class="typing">●●●</span>');
+  try {
+    const res = await fetch(AI_FEEDBACK.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+      body: JSON.stringify({
+        model: AI_FEEDBACK.model,
+        temperature: 0.5,
+        max_tokens: 350,
+        messages: [{ role: "system", content: coachSystemPrompt() }, ...chatHistory.slice(-10)],
+      }),
+    });
+    const data = await res.json();
+    const msg = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (msg) {
+      chatHistory.push({ role: "assistant", content: msg });
+      typing.innerHTML = mdLite(msg.trim());
+    } else {
+      typing.textContent = "Hmm, I couldn't think of a reply — try again?";
+    }
+  } catch (e) {
+    typing.textContent = "⚠️ Couldn't reach the AI right now — check your connection and try again.";
+  }
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  coachBusy = false;
+}
+
+$("chatForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = $("chatInput").value.trim();
+  if (!text) return;
+  $("chatInput").value = "";
+  coachSend(text);
+});
+
+function openCoach() {
+  show("coachScreen");
+  if (!$("chatLog").children.length) {
+    const name = profile && profile.name !== "Guest" ? ", " + profile.name : "";
+    addMsg("ai", `Hey${escapeHtml(name)}! 👋 I'm your coding coach. Ask me anything — what an error means, how a loop works, which language to learn next… I also know your weak spots from Targeted Practice, so ask me what to work on!`);
+  }
+  setTimeout(() => $("chatInput").focus(), 100);
+}
+
 /* ===================== Profile sheet ===================== */
 function openProfile() {
   const lessonsDone = Object.keys(state.completed).length;
@@ -1186,6 +1373,11 @@ $("navPractice").addEventListener("click", () => {
   show("practiceScreen");
   if (!$("feed").children.length) startFeed($("practiceFilter").value);
 });
+$("navTarget").addEventListener("click", () => {
+  renderTarget();
+  show("targetScreen");
+});
+$("navCoach").addEventListener("click", openCoach);
 $("navProfile").addEventListener("click", openProfile);
 $("avatarBtn").addEventListener("click", openProfile);
 
