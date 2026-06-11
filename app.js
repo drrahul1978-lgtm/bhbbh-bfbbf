@@ -128,6 +128,24 @@ const sfx = {
   sparkle: () => [784, 988, 1175, 1568].forEach((f, i) => note(f, i * 0.07, 0.14, "triangle", 0.1)),
   fanfare: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(f, i * 0.13, 0.26)),
   combo: () => [600, 800, 1050].forEach((f, i) => note(f, i * 0.06, 0.1, "triangle", 0.1)),
+  whoosh: () => {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.exponentialRampToValueAtTime(960, t + 0.55);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.65);
+      [1318, 1568].forEach((f, i) => note(f, 0.5 + i * 0.09, 0.16, "triangle", 0.08));
+    } catch (e) { /* sound is best-effort */ }
+  },
 };
 const dingGood = sfx.correct;
 const dingBad = sfx.wrong;
@@ -338,7 +356,44 @@ function shuffle(arr) {
   return a;
 }
 
+/* Duolingo-style lesson-start transition: dark screen full of twinkling stars */
+let transitioning = false;
+function lessonTransition(course, title, cb) {
+  if (transitioning) return;
+  transitioning = true;
+  const ov = document.createElement("div");
+  ov.className = "transition-ov";
+  for (let i = 0; i < 18; i++) {
+    const sp = document.createElement("span");
+    sp.className = "sparkle";
+    const size = 8 + Math.random() * 18;
+    sp.style.width = sp.style.height = size + "px";
+    sp.style.left = Math.random() * 100 + "vw";
+    sp.style.top = Math.random() * 100 + "vh";
+    sp.style.animationDelay = Math.random() * 0.7 + "s";
+    sp.style.opacity = 0.4 + Math.random() * 0.6;
+    ov.appendChild(sp);
+  }
+  ov.insertAdjacentHTML("beforeend", `
+    <div class="tr-badge" style="background:${course.color}">${escapeHtml(course.badge)}</div>
+    <div class="tr-title">${escapeHtml(title)}</div>
+    <div class="tr-sub">${escapeHtml(course.name)} · earn up to +${XP_LESSON_BONUS + XP_PERFECT_BONUS} XP bonus</div>`);
+  document.body.appendChild(ov);
+  sfx.whoosh();
+  setTimeout(() => {
+    cb();
+    ov.classList.add("out");
+    setTimeout(() => { ov.remove(); transitioning = false; }, 320);
+  }, 1150);
+}
+
 function startLesson(cid, u, l) {
+  const course = courseById(cid);
+  const title = course.units[u].lessons[l].title;
+  lessonTransition(course, title, () => beginLesson(cid, u, l));
+}
+
+function beginLesson(cid, u, l) {
   const course = courseById(cid);
   activeCourse = course;
   const data = course.units[u].lessons[l];
@@ -383,6 +438,9 @@ function setCheckEnabled(on) {
  * setAnswer(fn) registers the grader; onReady/onNotReady toggle the check button. */
 function renderExercise(ex, area, setAnswer, onReady, onNotReady) {
   area.innerHTML = "";
+  area.classList.remove("ex-slide");
+  void area.offsetWidth; // restart the slide-in between exercises
+  area.classList.add("ex-slide");
   const q = document.createElement("div");
   q.className = "exercise-q";
   q.textContent = ex.q;
