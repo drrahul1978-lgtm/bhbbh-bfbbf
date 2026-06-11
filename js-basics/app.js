@@ -497,6 +497,12 @@ function renderCourse() {
     const head = document.createElement("div");
     head.className = "unit-head";
     head.innerHTML = `<div><h3>${escapeHtml(unit.title)}</h3><p>${escapeHtml(unit.desc)}</p></div>`;
+    const guide = document.createElement("button");
+    guide.className = "guide-btn";
+    guide.textContent = "📖";
+    guide.title = "Open the unit cheat sheet";
+    guide.addEventListener("click", () => openGuidebook(unit, c));
+    head.appendChild(guide);
     const chest = document.createElement("button");
     chest.className = "chest-btn" + (unitDone && !claimed ? " claimable" : "");
     chest.textContent = unitDone && claimed ? "✅" : "🎁";
@@ -1493,6 +1499,39 @@ function runPlayground() {
   else if (cfg.mode === "wandbox") runWandbox(cfg.compiler, code);
   else showPlayOut("ℹ️ This language needs a full toolchain and can't run in the browser yet — but JS, Python, Java, C++ and 20 others can!");
 }
+
+/* ===================== Unit guidebook (auto cheat sheet) ===================== */
+function unitCheats(unit) {
+  const out = [];
+  unit.lessons.forEach((l) => l.exercises.forEach((ex) => {
+    if (ex.t === "code") out.push(ex.a);
+    else if (ex.code && String(ex.code).includes("___") && ex.choices) out.push(String(ex.code).replace("___", ex.choices[ex.a]));
+    else if (ex.code) out.push(String(ex.code));
+  }));
+  return [...new Set(out)].slice(0, 8);
+}
+
+function openGuidebook(unit, course) {
+  const cheats = unitCheats(unit);
+  $("guideCard").innerHTML = `
+    <div class="guide-head">
+      <span class="cc-badge" style="background:${course.color}">${escapeHtml(course.badge)}</span>
+      <div>
+        <h2>${escapeHtml(unit.title)}</h2>
+        <p>${escapeHtml(unit.desc)}</p>
+      </div>
+    </div>
+    ${cheats.length
+      ? '<div class="guide-label">📖 Code you\'ll meet in this unit</div>' +
+        cheats.map((c) => `<pre class="guide-snippet">${escapeHtml(c)}</pre>`).join("")
+      : '<p class="guide-none">This unit is concept questions — no cheat sheet needed. You\'ve got this! 💪</p>'}
+    <button class="big-btn" id="guideClose">GOT IT</button>`;
+  $("guideSheet").classList.remove("hidden");
+  $("guideClose").addEventListener("click", closeGuidebook);
+  sfx.tap();
+}
+function closeGuidebook() { $("guideSheet").classList.add("hidden"); }
+$("guideSheet").addEventListener("click", (e) => { if (e.target === $("guideSheet")) closeGuidebook(); });
 
 /* ===================== Profile sheet ===================== */
 function openProfile() {
