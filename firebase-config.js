@@ -34,7 +34,15 @@
  *  controlled by the authorized domains and the Firestore rules.
  * ============================================================ */
 
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAp24vRWN4tiQU9dUtifja8-5Q4IOnGk3A",
+  authDomain: "code-44f9b.firebaseapp.com",
+  projectId: "code-44f9b",
+  storageBucket: "code-44f9b.firebasestorage.app",
+  messagingSenderId: "738541259872",
+  appId: "1:738541259872:web:c80f21346492b4d12d0705",
+  measurementId: "G-DX36QD0MGF",
+};
 
 /* Example of what it should look like:
 const FIREBASE_CONFIG = {
