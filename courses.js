@@ -2536,6 +2536,38 @@ EXTRA_UNITS.js = [
       },
     ],
   },
+  {
+    title: "Unit 12 · Fetch & APIs",
+    desc: "Talk to the internet",
+    lessons: [
+      {
+        title: "Talking to the Internet",
+        exercises: [
+          mc("What is an API?", null,
+            ["A way for programs to request data from other programs", "A type of beer", "A JavaScript error", "A password"]),
+          mc('What does fetch("https://api.example.com/cats") do?', null,
+            ["Asks that server for data over the internet", "Downloads a cat", "Opens a new tab", "Prints the URL"]),
+          mc("Most web APIs send their answers in which format?", null,
+            ["JSON", "Word documents", "MP3", "Handwriting"]),
+          fill("Turn the response into usable data", "const res = await fetch(url);\nconst data = await res.___();", ["json", "data", "parse"]),
+          mc("What does await do?", null,
+            ["Waits for the result before running the next line", "Makes code run twice", "Waits exactly one second", "Stops the program forever"]),
+        ],
+      },
+      {
+        title: "Async & Promises",
+        exercises: [
+          mc("A Promise is…", null,
+            ["A value that will arrive later — pending, then fulfilled or rejected", "A guarantee code has no bugs", "A type of loop", "A comment"]),
+          fill("Only async functions can use await", '___ function load() {\n  const res = await fetch(url);\n}', ["async", "await", "promise"]),
+          mc("Tricky! What is the output ORDER?", 'console.log("a");\nsetTimeout(() => console.log("b"), 0);\nconsole.log("c");', ["a c b", "a b c", "b a c", "c b a"]),
+          mc("What does .then(...) do on a promise?", null,
+            ["Runs your function once the promise has its value", "Pauses the page", "Repeats the promise", "Cancels it"]),
+          codeEx("⌨️ Your turn — write the line that fetches url and awaits the response into res", "const res = await fetch(url);"),
+        ],
+      },
+    ],
+  },
 ];
 
 EXTRA_UNITS.java = [

@@ -1017,6 +1017,38 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
+/* Unit guidebook */
+.guide-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  margin-left: auto;
+  margin-right: 4px;
+  opacity: 0.75;
+}
+.guide-btn:hover { opacity: 1; transform: scale(1.1); }
+.guide-card { text-align: left; max-height: 80vh; overflow-y: auto; }
+.guide-head { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.guide-head .cc-badge { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-family: "JetBrains Mono", monospace; font-weight: 700; flex-shrink: 0; }
+.guide-head h2 { font-size: 1.15rem; }
+.guide-head p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+.guide-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 1.2px; color: var(--dim); text-transform: uppercase; margin: 12px 0 8px; }
+.guide-snippet {
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 13px;
+  margin: 0 0 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--code-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.guide-none { color: var(--muted); margin: 10px 0 16px; }
+.guide-card .big-btn { margin-top: 12px; }
+
 /* Confetti */
 .confetti {
   position: fixed;
