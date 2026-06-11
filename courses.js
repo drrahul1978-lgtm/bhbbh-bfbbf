@@ -173,6 +173,7 @@ function buildCourse(meta, g, x) {
             G.quotes(),
             mc(g.concat.q, g.concat.code || null, g.concat.choices),
             G.concatTerm(),
+            mc('How many characters? What is the output?', x.strLen.code, ["4", "3", "5", "Error"]),
             typeEx("Type the output of this code", g.hello.code, g.hello.ans),
           ],
         },
@@ -191,11 +192,23 @@ function buildCourse(meta, g, x) {
           ],
         },
         {
+          title: "Number Drills",
+          exercises: [
+            typeEx("Type the output of this code", x.wrap("3 + 4"), "7"),
+            mc("What is the output?", x.wrap("6 * 3"), ["18", "9", "63", "Error"]),
+            typeEx("Type the output of this code", x.wrap("9 - 4"), "5"),
+            mc("What is the output?", x.wrap(`8 ${x.modOp} 3`), ["2", "1", "3", "0"]),
+            mc("What is the output?", x.wrap("(2 + 3) * 2"), ["10", "12", "7", "8"]),
+            typeEx("Type the output of this code", x.wrap("5 * 5"), "25"),
+          ],
+        },
+        {
           title: "Comparisons",
           exercises: [
             mc(g.eqQ.q || `Which operator checks equality in ${N}?`, null, g.eqQ.choices),
             mc(x.neq.q || `Which means NOT equal in ${N}?`, null, x.neq.choices),
             mc("What is the output?", x.cmp.code, [x.cmp.out, ...x.cmp.wrong]),
+            mc("What is the output?", x.cmp2.code, [x.cmp2.out, ...x.cmp2.wrong]),
             G.gteQ(),
           ],
         },
@@ -218,8 +231,20 @@ function buildCourse(meta, g, x) {
           exercises: [
             G.elseRuns(),
             G.elseChain(),
+            mc(`Which keyword chains a second condition in ${N}?`, null,
+              [x.elif, ...["elif", "elsif", "elseif", "else if"].filter((k) => k !== x.elif).slice(0, 3)]),
             mc("What is the output?", g.ifQ.code, [g.ifQ.out, ...g.ifQ.wrong]),
             fill("Fill in the keyword", g.ifFill.code, g.ifFill.choices),
+          ],
+        },
+        {
+          title: "Logic Operators",
+          exercises: [
+            mc(`Which operator means AND in ${N}?`, null, x.logic.and),
+            mc(`Which operator means OR in ${N}?`, null, x.logic.or),
+            mc(`Which operator means NOT in ${N}?`, null, x.logic.not),
+            mc("If it must be sunny AND warm to swim, when do you swim?", null,
+              ["Only when both are true", "When either is true", "When neither is true", "Always"]),
           ],
         },
       ],
@@ -601,6 +626,31 @@ const HTML_UNITS = [
       },
     ],
   },
+  {
+    title: "Unit 3 · Tables & Media",
+    desc: "Structured data, video & semantics",
+    lessons: [
+      {
+        title: "Tables",
+        exercises: [
+          mc("Which tag starts a table?", null, ["<table>", "<tab>", "<grid>", "<sheet>"]),
+          mc("Which tag is a table ROW?", null, ["<tr>", "<td>", "<row>", "<line>"]),
+          fill("Add a data cell to the row", "<tr>\n  <___>42</td>\n</tr>", ["td", "cell", "tc"]),
+          mc("Which tag is a bold HEADER cell?", null, ["<th>", "<td>", "<head>", "<hd>"]),
+        ],
+      },
+      {
+        title: "Media & Semantics",
+        exercises: [
+          mc("Which tag embeds a video player?", null, ["<video>", "<movie>", "<media>", "<play>"]),
+          mc("Which tag plays sound?", null, ["<audio>", "<sound>", "<music>", "<mp3>"]),
+          mc("Which tag marks the top section of a page (logo, nav)?", null, ["<header>", "<top>", "<heading>", "<h1>"]),
+          mc("Why use semantic tags like <nav>, <main> and <footer>?", null,
+            ["They describe MEANING, helping search engines and screen readers", "They load faster", "They add styling automatically", "They are required by law"]),
+        ],
+      },
+    ],
+  },
 ];
 
 /* =====================================================================
@@ -662,6 +712,30 @@ const CSS_UNITS = [
             ["Centers children vertically", "Centers children horizontally", "Centers the page", "Nothing"]),
           mc("Which selector styles a link while the mouse is over it?", null,
             ["a:hover", "a.hover", "a-hover", "hover(a)"]),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 3 · Color & Effects",
+    desc: "Gradients, shadows & motion",
+    lessons: [
+      {
+        title: "More Color",
+        exercises: [
+          mc("Which writes a color from red/green/blue amounts?", null, ["rgb(255, 0, 0)", "color(red)", "mix(r, g, b)", "#rgb only"]),
+          mc("opacity: 0.5 makes an element…", null, ["Half transparent", "Half as wide", "Twice as bright", "Invisible"]),
+          fill("Fade between two colors", "background: linear-___(red, blue);", ["gradient", "fade", "blend"]),
+          mc("Which color is #00ff00?", null, ["green", "red", "blue", "yellow"]),
+        ],
+      },
+      {
+        title: "Shadows & Motion",
+        exercises: [
+          mc("Which property adds a soft shadow under a card?", null, ["box-shadow", "shadow", "drop", "blur-under"]),
+          fill("Animate changes smoothly over 0.3 seconds", "transition: all 0.3___;", ["s", "px", "x"]),
+          mc("transform: scale(1.1) makes an element…", null, ["10% bigger", "10% smaller", "Rotated 1.1°", "1.1px wider"]),
+          mc("Which makes the mouse pointer a hand over a button?", null, ["cursor: pointer", "mouse: hand", "pointer: hand", "hover: grab"]),
         ],
       },
     ],
@@ -728,6 +802,31 @@ const SQL_UNITS = [
           mc("A PRIMARY KEY is…", null,
             ["A column that uniquely identifies each row", "The first column", "A password", "The fastest column"]),
           typeEx("Which keyword combines two tables? (type it)", "SELECT * FROM orders ___ users ON orders.user_id = users.id;", "JOIN"),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 3 · Tables & Safety",
+    desc: "Create tables, combine conditions",
+    lessons: [
+      {
+        title: "Making Tables",
+        exercises: [
+          mc("Which statement makes a NEW table?", null, ["CREATE TABLE", "NEW TABLE", "MAKE TABLE", "ADD TABLE"]),
+          fill("Give the column a text type", "CREATE TABLE users (\n  name ___(50)\n);", ["VARCHAR", "TEXTBOX", "STRINGY"]),
+          mc("NULL in a row means…", null, ["The value is missing/unknown", "The value is zero", "The text 'NULL'", "An error"]),
+          mc("Which combines two conditions in a WHERE clause?", null, ["AND", "PLUS", "WITH", "&&&"]),
+        ],
+      },
+      {
+        title: "Patterns & Math",
+        exercises: [
+          mc("WHERE name LIKE 'A%' matches…", null, ["Names starting with A", "Names ending with A", "Names containing %", "Exactly 'A%'"]),
+          fill("Ages from 13 to 19 inclusive", "WHERE age ___ 13 AND 19;", ["BETWEEN", "RANGE", "FROM"]),
+          mc("Which gives the average of a column?", null, ["AVG(score)", "MEAN(score)", "MID(score)", "AVERAGE ALL"]),
+          mc("Why use query parameters instead of pasting user text into SQL?", null,
+            ["To prevent SQL injection attacks", "It runs faster", "It looks nicer", "Parameters are required"]),
         ],
       },
     ],
@@ -1507,6 +1606,87 @@ EXT.perl = {
 };
 
 /* =====================================================================
+ * Drill pack specs — print wrappers, logic ops, elif keyword, string length
+ * =================================================================== */
+const AND_STD = ["&&", "and", "&", "AND"];
+const OR_STD = ["||", "or", "|", "OR"];
+const NOT_STD = ["!", "not", "~", "NOT"];
+const AND_WORD = ["and", "&&", "&", "AND"];
+const OR_WORD = ["or", "||", "|", "OR"];
+const NOT_WORD = ["not", "!", "~", "NOT"];
+
+const EXT2 = {
+  python: { wrap: (e) => `print(${e})`, modOp: "%", elif: "elif",
+    logic: { and: AND_WORD, or: OR_WORD, not: NOT_WORD },
+    cmp2: { code: "print(2 > 9)", out: "False", wrong: ["True", "0", "Error"] },
+    strLen: { code: 'print(len("code"))' } },
+  typescript: { wrap: (e) => `console.log(${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "console.log(2 > 9);", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'console.log("code".length);' } },
+  java: { wrap: (e) => `System.out.println(${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "System.out.println(2 > 9);", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'System.out.println("code".length());' } },
+  csharp: { wrap: (e) => `Console.WriteLine(${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "Console.WriteLine(2 > 9);", out: "False", wrong: ["false", "0", "Error"] },
+    strLen: { code: 'Console.WriteLine("code".Length);' } },
+  cpp: { wrap: (e) => `std::cout << ${e};`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "std::cout << (2 > 9);", out: "0", wrong: ["false", "1", "Error"] },
+    strLen: { code: 'std::string w = "code";\nstd::cout << w.size();' } },
+  c: { wrap: (e) => `printf("%d", ${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: 'printf("%d", 2 > 9);', out: "0", wrong: ["false", "1", "Error"] },
+    strLen: { code: 'printf("%zu", strlen("code"));' } },
+  go: { wrap: (e) => `fmt.Println(${e})`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "fmt.Println(2 > 9)", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'fmt.Println(len("code"))' } },
+  rust: { wrap: (e) => `println!("{}", ${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: 'println!("{}", 2 > 9);', out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'println!("{}", "code".len());' } },
+  php: { wrap: (e) => `echo ${e};`, modOp: "%", elif: "elseif",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: 'echo 2 > 9 ? "yes" : "no";', out: "no", wrong: ["yes", "0", "Error"] },
+    strLen: { code: 'echo strlen("code");' } },
+  ruby: { wrap: (e) => `puts ${e}`, modOp: "%", elif: "elsif",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "puts 2 > 9", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'puts "code".length' } },
+  swift: { wrap: (e) => `print(${e})`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "print(2 > 9)", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'print("code".count)' } },
+  kotlin: { wrap: (e) => `println(${e})`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "println(2 > 9)", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'println("code".length)' } },
+  dart: { wrap: (e) => `print(${e});`, modOp: "%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "print(2 > 9);", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: "print('code'.length);" } },
+  bash: { wrap: (e) => `echo $((${e}))`, modOp: "%", elif: "elif",
+    logic: { and: ["&& (inside [[ ]] or between commands)", "and", "&", "AND"], or: ["||", "or", "|", "OR"], not: ["!", "not", "~", "NOT"] },
+    cmp2: { code: "echo $((2 > 9))", out: "0", wrong: ["1", "false", "Error"] },
+    strLen: { code: 'w="code"\necho ${#w}' } },
+  lua: { wrap: (e) => `print(${e})`, modOp: "%", elif: "elseif",
+    logic: { and: AND_WORD, or: OR_WORD, not: NOT_WORD },
+    cmp2: { code: "print(2 > 9)", out: "false", wrong: ["true", "0", "Error"] },
+    strLen: { code: 'print(#"code")' } },
+  r: { wrap: (e) => `cat(${e})`, modOp: "%%", elif: "else if",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: "cat(2 > 9)", out: "FALSE", wrong: ["false", "0", "Error"] },
+    strLen: { code: 'cat(nchar("code"))' } },
+  perl: { wrap: (e) => `print ${e};`, modOp: "%", elif: "elsif",
+    logic: { and: AND_STD, or: OR_STD, not: NOT_STD },
+    cmp2: { code: 'print 2 > 9 ? "yes" : "no";', out: "no", wrong: ["yes", "0", "Error"] },
+    strLen: { code: 'print length("code");' } },
+};
+
+/* =====================================================================
  * The catalog
  * =================================================================== */
 const COURSES = [
@@ -1555,5 +1735,5 @@ const COURSES = [
 ].map((meta) =>
   meta.units
     ? { ...meta, units: withReviewUnits(meta.units, meta.units.length + 1) }
-    : buildCourse(meta, SPEC[meta.id], EXT[meta.id])
+    : buildCourse(meta, SPEC[meta.id], { ...EXT[meta.id], ...EXT2[meta.id] })
 );
