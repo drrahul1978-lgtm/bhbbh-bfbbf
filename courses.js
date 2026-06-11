@@ -325,7 +325,9 @@ function buildCourse(meta, g, x) {
       ],
     },
   ];
-  return { ...meta, units: withReviewUnits(units, 9) };
+  const extra = (typeof EXTRA_UNITS !== "undefined" && EXTRA_UNITS[meta.id]) || [];
+  const all = [...units, ...extra];
+  return { ...meta, units: withReviewUnits(all, all.length + 1) };
 }
 
 /* =====================================================================
@@ -2080,6 +2082,288 @@ const EXT2 = {
 };
 
 /* =====================================================================
+ * Extra hand-written units appended to specific generated courses
+ * =================================================================== */
+const EXTRA_UNITS = {};
+
+EXTRA_UNITS.python = [
+  {
+    title: "Unit 9 · Dictionaries & Tuples",
+    desc: "Key-value pairs and fixed groups",
+    lessons: [
+      {
+        title: "Dictionaries",
+        exercises: [
+          mc("How do you create a dictionary in Python?", null,
+            ['person = {"name": "Ada"}', 'person = ["name": "Ada"]', 'person = ("name" = "Ada")', 'dict person = name, Ada']),
+          mc("What is the output?", 'person = {"name": "Ada", "age": 36}\nprint(person["name"])', ["Ada", "name", "36", "Error"]),
+          fill("Print Ada's age", 'print(person[___])', ['"age"', "age", "(age)"]),
+          mc("How do you ADD a new key to a dict?", null,
+            ['person["city"] = "London"', 'person.push("city", "London")', 'person.add("city")', 'insert person city']),
+          typeEx("Type the output of this code", 'd = {"a": 1, "b": 2}\nprint(len(d))', "2"),
+        ],
+      },
+      {
+        title: "Tuples & in",
+        exercises: [
+          mc("What makes a tuple (1, 2, 3) different from a list?", null,
+            ["It cannot be changed after creation", "It is faster to spell", "It holds only numbers", "It is sorted automatically"]),
+          mc("What is the output?", "t = (1, 2, 3)\nprint(t[0])", ["1", "0", "(1)", "Error"]),
+          mc("What is the output?", 'print("a" in ["a", "b"])', ["True", "true", "a", "Error"]),
+          fill("Check if cat is one of the pets", 'if "cat" ___ pets:', ["in", "of", "inside"]),
+          mc("What does a set {1, 2, 2, 3} automatically remove?", null,
+            ["Duplicates — it becomes {1, 2, 3}", "The biggest number", "Nothing", "Odd numbers"]),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 10 · Strings & f-strings",
+    desc: "Slice, shout and format text",
+    lessons: [
+      {
+        title: "String Methods",
+        exercises: [
+          typeEx("Type the output of this code", 'print("hi".upper())', "HI"),
+          mc("What does \"Hello\".lower() give you?", null, ['"hello"', '"HELLO"', '"Hello"', "An error"]),
+          mc("What is the output?", 'print(len("banana"))', ["6", "5", "7", "banana"]),
+          fill("SHOUT IT — make it all capitals", 'print("python".___())', ["upper", "loud", "caps"]),
+          mc('What does " spam ".strip() do?', null,
+            ["Removes the spaces at both ends", "Removes all letters", "Splits it into a list", "Reverses it"]),
+        ],
+      },
+      {
+        title: "f-strings & Slices",
+        exercises: [
+          mc("What is the output?", 'name = "Ada"\nprint(f"Hi {name}")', ["Hi Ada", "Hi {name}", "f Hi Ada", "Error"]),
+          fill("Make it an f-string so {score} is filled in", 'print(___"Score: {score}")', ["f", "s", "$"]),
+          typeEx("Type the output of this code", 'print("python"[0:3])', "pyt"),
+          mc("What is \"code\"[-1]?", null, ['"e"', '"c"', '"d"', "An error"]),
+          codeEx("⌨️ Your turn — name holds \"Ada\". Write an f-string line that prints: Hi Ada", 'print(f"Hi {name}")'),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 11 · Input & Loops II",
+    desc: "Talk to users, master ranges",
+    lessons: [
+      {
+        title: "Input & Casting",
+        exercises: [
+          mc("input() ALWAYS returns which type?", null, ["A string", "A number", "A boolean", "Whatever you typed"]),
+          fill("Turn the typed text into a number", "age = ___(input())", ["int", "num", "number"]),
+          mc("What is int(\"5\") + 2?", null, ["7", '"52"', '"7"', "Error"]),
+          mc("What is str(5) + \"!\"?", null, ['"5!"', "6", "5", "Error"]),
+          mc("What is round(3.7)?", null, ["4", "3", "3.7", "Error"]),
+        ],
+      },
+      {
+        title: "Loops Level 2",
+        exercises: [
+          mc("What numbers does range(2, 5) give?", null, ["2 3 4", "2 3 4 5", "3 4 5", "2 5"]),
+          mc("What is the output?", "for i in range(0, 10, 2):\n    print(i)", ["0 2 4 6 8", "0 1 2 … 9", "2 4 6 8 10", "0 10 2"]),
+          fill("Print 1 to 4", "for i in range(1, ___):\n    print(i)", ["5", "4", "1"]),
+          mc("What does break do inside a loop?", null,
+            ["Exits the loop immediately", "Pauses for a second", "Skips one round", "Restarts the loop"]),
+          mc("What does continue do inside a loop?", null,
+            ["Skips to the next round of the loop", "Exits the loop", "Repeats the same round", "Does nothing"]),
+        ],
+      },
+    ],
+  },
+];
+
+EXTRA_UNITS.js = [
+  {
+    title: "Unit 9 · Objects & JSON",
+    desc: "Label your data with names",
+    lessons: [
+      {
+        title: "Objects",
+        exercises: [
+          mc("How do you create an object in JavaScript?", null,
+            ['let person = { name: "Ada" };', 'let person = [ name: "Ada" ];', 'object person = name: "Ada";', 'let person = ( name = "Ada" );']),
+          mc("What is the output?", 'let person = { name: "Ada", age: 36 };\nconsole.log(person.name);', ["Ada", "name", "36", "undefined"]),
+          fill("Print Ada's age", "console.log(person.___);", ["age", '"age"', "(age)"]),
+          mc("How do you ADD a new property to an object?", null,
+            ['person.city = "London";', 'person.push("city");', 'person.add("city", "London");', "insert person.city"]),
+          typeEx("Type the output of this code", "let d = { a: 1, b: 2 };\nconsole.log(d.a);", "1"),
+        ],
+      },
+      {
+        title: "JSON & Methods",
+        exercises: [
+          mc("What is JSON?", null,
+            ["A text format for sending and storing data", "A JavaScript-only database", "A type of loop", "A styling language"]),
+          mc("What does JSON.stringify({ a: 1 }) give you?", null,
+            ['the text \'{"a":1}\'', "a number", "an error", "a copy of the object"]),
+          mc("Which puts a FUNCTION inside an object?", null,
+            ['{ greet() { console.log("Hi"); } }', "{ greet: loop }", "{ function: greet }", "objects can't hold functions"]),
+          mc("Inside an object's method, this refers to…", null,
+            ["The object itself", "The whole page", "The function name", "Nothing"]),
+          codeEx("⌨️ Your turn — person has a name property. Write the line that prints it", "console.log(person.name);"),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 10 · Strings & Templates",
+    desc: "Shape text like a pro",
+    lessons: [
+      {
+        title: "String Methods",
+        exercises: [
+          typeEx("Type the output of this code", 'console.log("hi".toUpperCase());', "HI"),
+          mc('What does "Banana".length give you?', null, ["6", "5", "7", '"Banana"']),
+          mc("What is the output?", 'console.log("code"[0]);', ["c", "o", "0", "code"]),
+          fill("Check whether the text contains Script", '"JavaScript".___("Script")', ["includes", "contains", "has"]),
+          mc('What does "  spam  ".trim() do?', null,
+            ["Removes the spaces at both ends", "Removes all letters", "Cuts it in half", "Reverses it"]),
+        ],
+      },
+      {
+        title: "Template Literals",
+        exercises: [
+          mc("What is the output? (note the backticks)", 'let name = "Ada";\nconsole.log(`Hi ${name}`);', ["Hi Ada", "Hi ${name}", "`Hi Ada`", "Error"]),
+          fill("Fill the blank inside the template", "console.log(`Score: ${___}`);", ["score", '"score"', "$score"]),
+          typeEx("Type the output of this code", 'console.log("js".repeat(2));', "jsjs"),
+          mc('What does "a,b,c".split(",") give you?', null,
+            ['["a", "b", "c"]', '"abc"', "3", '["a,b,c"]']),
+          codeEx("⌨️ Your turn — name holds \"Ada\". Print Hi Ada using a template literal (backticks)",
+            "console.log(`Hi ${name}`);", ['console.log("Hi " + name);']),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 11 · The DOM & Events",
+    desc: "Make web pages come alive",
+    lessons: [
+      {
+        title: "The DOM",
+        exercises: [
+          mc("What is the DOM?", null,
+            ["JavaScript's live view of the page, which it can read and change", "A database", "A CSS framework", "A browser brand"]),
+          mc('What does document.getElementById("title") do?', null,
+            ['Finds the element with id="title"', "Creates a new title", "Deletes the title", "Renames the page"]),
+          fill("Grab the button by its id", 'document.___("btn")', ["getElementById", "findId", "selectById"]),
+          mc('What does el.textContent = "Hi" do?', null,
+            ["Changes the element's text to Hi", "Creates a variable", "Logs Hi", "Adds a CSS class"]),
+          mc('What does document.querySelector(".card") find?', null,
+            ["The FIRST element matching the CSS selector .card", "All cards", "A playing card", "The card's id"]),
+        ],
+      },
+      {
+        title: "Events",
+        exercises: [
+          mc('What does btn.addEventListener("click", handle) do?', null,
+            ["Runs handle every time the button is clicked", "Clicks the button once", "Renames the button", "Blocks all clicks"]),
+          fill("React to clicks", "btn.addEventListener(___, handle);", ['"click"', "click", "onClick"]),
+          mc("Which of these are real browser events?", null,
+            ["click, keydown and submit", "jump, spin and dance", "if, else and for", "px, em and rem"]),
+          mc("What is () => { … } ?", null,
+            ["An arrow function — a short way to write a function", "An emoji", "A comparison", "A comment"]),
+          codeEx("⌨️ Your turn — write the line that sets el's text to Hi", 'el.textContent = "Hi";'),
+        ],
+      },
+    ],
+  },
+];
+
+EXTRA_UNITS.java = [
+  {
+    title: "Unit 9 · Strings in Depth",
+    desc: "Methods, traps and tricks",
+    lessons: [
+      {
+        title: "String Methods",
+        exercises: [
+          typeEx("Type the output of this code", 'System.out.println("hi".toUpperCase());', "HI"),
+          mc('What does "Banana".length() return?', null, ["6", "5", "7", "Banana"]),
+          mc("What is the output?", 'System.out.println("Java".charAt(0));', ["J", "a", "0", "Java"]),
+          fill("Compare the TEXT of two strings", 'name.___("Ada")', ["equals", "==", "sameAs"]),
+          mc("Why use .equals() instead of == for Strings?", null,
+            ["== compares references; .equals() compares the actual text", "They are identical", ".equals() is faster", "== only works on numbers"]),
+        ],
+      },
+      {
+        title: "Building Strings",
+        exercises: [
+          mc('What does "Mc" + "Queen" give you?', null, ['"McQueen"', '"Mc Queen"', "An error", '"Mc+Queen"']),
+          mc("Careful! What is the output?", 'System.out.println("Ja" + 1 + 1);', ["Ja11", "Ja2", "Ja:2", "Error"]),
+          mc("How do you turn the number 42 into a String?", null,
+            ['String.valueOf(42)', "(String) 42", "42.toString() directly", 'string(42)']),
+          typeEx("Type the output of this code", 'System.out.println("racecar".length());', "7"),
+          codeEx("⌨️ Your turn — write one line that prints \"hello\" in CAPITALS using toUpperCase()", 'System.out.println("hello".toUpperCase());'),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 10 · Classes & Objects",
+    desc: "Blueprints and the things they build",
+    lessons: [
+      {
+        title: "Your First Class",
+        exercises: [
+          mc("Which keyword defines a class in Java?", null, ["class", "object", "blueprint", "struct"]),
+          mc("How do you CREATE a Dog object?", null,
+            ["Dog d = new Dog();", "Dog d = Dog.create();", "make Dog d;", "object d = Dog;"]),
+          fill("Fill in the keyword", "Dog d = ___ Dog();", ["new", "make", "create"]),
+          mc("A class is a … and an object is a …", null,
+            ["blueprint / thing built from it", "thing / blueprint", "loop / variable", "file / folder"]),
+          mc("What is the output?", 'class Dog {\n    String name = "Rex";\n}\n// later…\nDog d = new Dog();\nSystem.out.println(d.name);', ["Rex", "name", "Dog", "null"]),
+        ],
+      },
+      {
+        title: "Methods & Constructors",
+        exercises: [
+          mc("Fields of a class are…", null,
+            ["Variables that belong to each object", "Grass areas", "Static files", "Loop counters"]),
+          mc("What is the output?", 'class Dog {\n    void bark() {\n        System.out.println("Woof!");\n    }\n}\n// later…\nnew Dog().bark();', ["Woof!", "bark", "Dog", "Nothing"]),
+          fill("This method returns nothing", "public ___ bark() {\n    System.out.println(\"Woof!\");\n}", ["void", "null", "none"]),
+          mc("A constructor is…", null,
+            ["A special method, named like the class, that runs when an object is created", "A builder robot", "A loop inside a class", "The first field"]),
+          mc("Inside a method, this refers to…", null,
+            ["The current object", "The parent class", "The main method", "The compiler"]),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 11 · ArrayList & Switch",
+    desc: "Growable lists and many-way choices",
+    lessons: [
+      {
+        title: "ArrayList",
+        exercises: [
+          mc("Why use an ArrayList instead of an array?", null,
+            ["It grows and shrinks as you add and remove items", "It is spelled cooler", "It only holds Strings", "Arrays are deprecated"]),
+          fill('Add "apple" to the list', 'list.___("apple");', ["add", "push", "append"]),
+          mc("What is the output?", 'ArrayList<String> l = new ArrayList<>();\nl.add("a");\nl.add("b");\nSystem.out.println(l.size());', ["2", "1", "b", "Error"]),
+          typeEx("Type the output of this code", 'ArrayList<String> l = new ArrayList<>();\nl.add("hi");\nSystem.out.println(l.get(0));', "hi"),
+          mc("list.get(0) returns…", null, ["The first element", "The last element", "The list size", "Nothing"]),
+        ],
+      },
+      {
+        title: "Switch & Casting",
+        exercises: [
+          mc("A switch statement…", null,
+            ["Picks ONE case to run from many options", "Turns the program off", "Loops forever", "Swaps two variables"]),
+          fill("Fill in the keyword", '___ (day) {\n    case 1:\n        System.out.println("Mon");\n        break;\n}', ["switch", "select", "match"]),
+          mc("What does break do at the end of a case?", null,
+            ["Stops fall-through into the next case", "Crashes the switch", "Restarts the switch", "Nothing"]),
+          mc("What is the output? (casting chops off decimals)", "int x = (int) 3.9;\nSystem.out.println(x);", ["3", "4", "3.9", "Error"]),
+          mc("final int MAX = 10; means…", null,
+            ["MAX can never be reassigned", "MAX is the last variable", "MAX is private", "MAX is checked at the end"]),
+        ],
+      },
+    ],
+  },
+];
+
+/* =====================================================================
  * The catalog
  * =================================================================== */
 const COURSES = [
@@ -2141,8 +2425,10 @@ const COURSES = [
     tagline: "Classic Apple development", difficulty: "Advanced" },
   { id: "vb", name: "Visual Basic", badge: "VB", color: "#0e7490", colorDark: "#0a5568",
     tagline: "Friendly Windows apps", difficulty: "Beginner" },
-].map((meta) =>
-  meta.units
-    ? { ...meta, units: withReviewUnits(meta.units, meta.units.length + 1) }
-    : buildCourse(meta, SPEC[meta.id], { ...EXT[meta.id], ...EXT2[meta.id] })
-);
+].map((meta) => {
+  if (meta.units) {
+    const all = [...meta.units, ...(EXTRA_UNITS[meta.id] || [])];
+    return { ...meta, units: withReviewUnits(all, all.length + 1) };
+  }
+  return buildCourse(meta, SPEC[meta.id], { ...EXT[meta.id], ...EXT2[meta.id] });
+});
