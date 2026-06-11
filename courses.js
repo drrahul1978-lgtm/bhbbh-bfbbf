@@ -2297,6 +2297,100 @@ EXTRA_UNITS.python = [
       },
     ],
   },
+  {
+    title: "Unit 12 · Functions II",
+    desc: "Defaults, scope and lambdas",
+    lessons: [
+      {
+        title: "Smarter Functions",
+        exercises: [
+          mc('In def greet(name="friend"), what is "friend"?', null,
+            ["A default value, used when no argument is given", "The only allowed value", "A comment", "The function's name"]),
+          mc("What is the output?", 'def greet(name="friend"):\n    print("Hi", name)\n\ngreet()', ["Hi friend", "Hi name", "Hi", "Error"]),
+          fill("Give exp a default of 2", "def power(base, exp___2):", ["=", "==", ":="]),
+          mc("A function with no return statement returns…", null, ["None", "0", "An empty string", "An error"]),
+          typeEx("Type the output of this code", "def f():\n    return 3 + 4\n\nprint(f())", "7"),
+        ],
+      },
+      {
+        title: "Scope & Lambda",
+        exercises: [
+          mc("A variable created INSIDE a function is…", null,
+            ["Local — it only exists inside that function", "Global forever", "Saved to a file", "Shared with all functions"]),
+          mc("What is lambda x: x * 2?", null,
+            ["A tiny anonymous function", "A Greek variable", "A loop", "A comment"]),
+          mc("What is the output?", "double = lambda x: x * 2\nprint(double(4))", ["8", "4", "x * 2", "Error"]),
+          mc("What is the output?", "nums = [1, 2, 3]\nprint([x * 2 for x in nums])", ["[2, 4, 6]", "[1, 2, 3, 1, 2, 3]", "6", "Error"]),
+          codeEx("⌨️ Your turn — write the def line for a function add that takes a and b", "def add(a, b):"),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 13 · Errors & try/except",
+    desc: "Crash less, recover more",
+    lessons: [
+      {
+        title: "Reading Errors",
+        exercises: [
+          mc("Which code causes a ZeroDivisionError?", null, ["print(1 / 0)", "print(0 / 1)", "print(0 * 0)", "print(0 + 0)"]),
+          mc("A NameError means…", null,
+            ["You used a variable that doesn't exist", "Your name is invalid", "The file is unnamed", "Python forgot your name"]),
+          mc("What error does \"5\" + 5 raise?", null,
+            ["TypeError — can't add str and int", "ValueError", "MathError", "Nothing — it gives 10"]),
+          mc("nums = [1, 2]; print(nums[5]) raises…", null,
+            ["IndexError — list index out of range", "KeyError", "ValueError", "Nothing — it prints None"]),
+          mc("A SyntaxError means…", null,
+            ["The code breaks Python's grammar rules", "The logic is wrong", "The computer is slow", "A library is missing"]),
+        ],
+      },
+      {
+        title: "try / except",
+        exercises: [
+          fill("Protect the risky code", '___:\n    risky()\nexcept:\n    print("saved!")', ["try", "test", "catch"]),
+          mc("What is the output?", 'try:\n    print(1 / 0)\nexcept ZeroDivisionError:\n    print("oops")', ["oops", "Error", "0", "1"]),
+          mc("The except block runs when…", null,
+            ["An error happens inside try", "The code succeeds", "The program starts", "You press Ctrl+C"]),
+          mc("A finally block…", null,
+            ["Always runs — error or not", "Runs only on errors", "Runs only on success", "Ends the program"]),
+          codeEx("⌨️ Your turn — write the except line that catches a ValueError", "except ValueError:"),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 14 · Modules & Files",
+    desc: "Borrow power, save data",
+    lessons: [
+      {
+        title: "Imports & Modules",
+        exercises: [
+          mc("What does import math do?", null,
+            ["Loads the math module so you can use its functions", "Does your math homework", "Imports all numbers", "Creates a variable called math"]),
+          mc("What is the output?", "import math\nprint(math.sqrt(16))", ["4.0", "4", "256", "Error"]),
+          fill("Load the random module", "___ random", ["import", "include", "use"]),
+          mc("What does from random import randint do?", null,
+            ["Imports just the randint function", "Imports everything", "Makes randint random", "Renames random"]),
+          mc("random.randint(1, 6) is perfect for…", null,
+            ["Rolling a dice — a random whole number from 1 to 6", "Counting to 6", "Rounding to 6", "Making 6 random files"]),
+        ],
+      },
+      {
+        title: "Working with Files",
+        exercises: [
+          mc('What does open("notes.txt") do?', null,
+            ["Opens the file so you can read it", "Prints the file", "Deletes the file", "Creates a folder"]),
+          fill("Open the file the safe, modern way", 'with open("data.txt") ___ f:', ["as", "to", "in"]),
+          mc("Why use with open(...) instead of plain open(...)?", null,
+            ["The file is closed automatically, even if an error happens", "It opens faster", "It works on more files", "It's just fashion"]),
+          mc("f.read() gives you…", null,
+            ["The whole file as one string", "One letter", "The file size", "A list of files"]),
+          mc('Opening a file with mode "w" will…', null,
+            ["Write — and OVERWRITE anything already in it", "Wait for the file", "Make it read-only", "Warn you first"]),
+        ],
+      },
+    ],
+  },
 ];
 
 EXTRA_UNITS.js = [
