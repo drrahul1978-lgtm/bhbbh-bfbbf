@@ -107,6 +107,53 @@ function bumpStreak() {
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   state.streak = state.lastDay === yesterday ? state.streak + 1 : 1;
   state.lastDay = today;
+  if (state.streak >= 2) showToast(`🔥 <b>${state.streak}-day streak!</b> You're on a roll!`);
+  bumpStat("statStreak");
+}
+
+/* ===================== Levels =====================
+ * Levels are DERIVED from XP (xp needed for level n = 20·(n−1)²),
+ * so nothing extra is stored and progress can never desync. */
+const xpForLevel = (lvl) => 20 * (lvl - 1) * (lvl - 1);
+function levelProgress(xp) {
+  const lvl = Math.floor(Math.sqrt(xp / 20)) + 1;
+  const cur = xpForLevel(lvl);
+  const next = xpForLevel(lvl + 1);
+  return { lvl, pct: Math.round(((xp - cur) / (next - cur)) * 100), toNext: next - xp };
+}
+
+/* Single entry point for earning XP: persists, updates UI, floats the
+ * gain near `anchor` if given, and celebrates level-ups. */
+function addXp(amount, anchor) {
+  const before = levelProgress(state.xp).lvl;
+  state.xp += amount;
+  saveState();
+  renderHeader();
+  bumpStat("statXp");
+  if (anchor) floatAt(anchor, `+${amount} XP`);
+  const after = levelProgress(state.xp).lvl;
+  if (after > before) {
+    showToast(`🏅 <b>Level ${after}!</b> ${["Keep it up!", "Unstoppable!", "Big brain energy!"][after % 3]}`);
+    sfx.sparkle();
+    confetti(24);
+  }
+}
+
+/* ===================== Toast ===================== */
+let toastTimer = null;
+function showToast(html) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    document.body.appendChild(t);
+  }
+  t.innerHTML = html;
+  t.classList.remove("show");
+  void t.offsetWidth;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
 const lessonKey = (cid, u, l) => `${cid}:${u}-${l}`;
@@ -159,6 +206,10 @@ function renderHeader() {
   $("statGems").textContent = state.gems;
   $("statXp").textContent = state.xp;
   $("avatarBtn").textContent = profile ? (profile.name[0] || "?").toUpperCase() : "?";
+  const lp = levelProgress(state.xp);
+  $("statLevel").textContent = lp.lvl;
+  $("lvlFill").style.width = lp.pct + "%";
+  $("levelChip").title = `Level ${lp.lvl} — ${lp.toNext} XP to level ${lp.lvl + 1}`;
 }
 
 /* ===================== Sounds (WebAudio synth) ===================== */
@@ -733,14 +784,11 @@ $("checkBtn").addEventListener("click", () => {
 
   if (ok) {
     lesson.correct++;
-    state.xp += XP_PER_CORRECT;
-    saveState();
-    renderHeader();
+    addXp(XP_PER_CORRECT, btn);
     fb.className = "feedback good";
     $("feedbackTitle").textContent = ["Nice!", "Correct!", "Great job!", "Nailed it!"][Math.floor(Math.random() * 4)];
     $("feedbackDetail").textContent = "+" + XP_PER_CORRECT + " XP";
     btn.className = "big-btn good";
-    floatAt(btn, `+${XP_PER_CORRECT} XP`);
     dingGood();
   } else {
     lesson.mistakes++;
@@ -775,15 +823,18 @@ function endLesson(passed) {
   if (passed) {
     const perfect = lesson.mistakes === 0;
     state.completed[lessonKey(lesson.cid, lesson.u, lesson.l)] = true;
-    state.xp += XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0);
+    addXp(XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0));
     bumpStreak();
     saveState();
     const earned = XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0) + lesson.total * XP_PER_CORRECT;
     const accuracy = Math.round((lesson.total / (lesson.total + lesson.mistakes)) * 100);
+    const cheer = perfect
+      ? ["Perfect lesson!", "Flawless! 100%!", "Not a single miss!"][Math.floor(Math.random() * 3)]
+      : ["Lesson complete!", "Great job!", "You're on a roll!", "Brain: upgraded!"][Math.floor(Math.random() * 4)];
 
     card.innerHTML = `
       <div class="result-mascot">${mascotSVG(c.color)}</div>
-      <h1>${perfect ? "Perfect lesson!" : "Lesson complete!"}</h1>
+      <h1>${cheer}</h1>
       <p>${escapeHtml(c.units[lesson.u].lessons[lesson.l].title)} · ${escapeHtml(c.name)}</p>
       <div class="result-stats">
         <div class="result-stat"><span class="label">TOTAL XP</span><span class="value">⚡ ${earned}</span></div>
@@ -815,9 +866,9 @@ function endLesson(passed) {
   });
 }
 
-function confetti() {
+function confetti(count = 60) {
   const colors = ["#7c5cff", "#22d3ee", "#34d399", "#fbbf24", "#fb5e6c", "#f472b6"];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < count; i++) {
     const piece = document.createElement("div");
     piece.className = "confetti";
     piece.style.left = Math.random() * 100 + "vw";
@@ -917,7 +968,7 @@ function buildFeedCard(ex, course) {
     if (ok) {
       feedCorrect++;
       feedCombo++;
-      state.xp += XP_PER_CORRECT;
+      addXp(XP_PER_CORRECT);
       bumpStreak();
       saveState();
       floatAt(q, `+${XP_PER_CORRECT} XP`);
@@ -1006,6 +1057,7 @@ function openProfile() {
     <h2>${escapeHtml(profile ? profile.name : "Guest")}</h2>
     <div class="email">${escapeHtml(profile && profile.email ? profile.email : `Signed in with ${profile ? profile.method : "—"}`)}</div>
     <div class="sheet-stats">
+      <span><b>${levelProgress(state.xp).lvl}</b>level</span>
       <span><b>${state.xp}</b>XP</span>
       <span><b>${state.streak}</b>day streak</span>
       <span><b>${state.gems}</b>gems</span>
