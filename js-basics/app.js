@@ -920,6 +920,7 @@ $("checkBtn").addEventListener("click", () => {
     fb.className = "feedback bad";
     $("feedbackTitle").textContent = "Not quite…";
     $("feedbackDetail").innerHTML = `Correct answer: <code>${escapeHtml(correctText)}</code>`;
+    $("feedbackDetail").appendChild(makeAskCoachBtn(ex, activeCourse.name, typed));
     if (ex.t === "code" && typeof typed === "string" && typed.trim()) {
       requestAiNote(ex, typed, activeCourse.name, $("feedbackDetail"));
     }
@@ -1104,6 +1105,7 @@ function buildFeedCard(ex, course) {
     } else {
       feedCombo = 0;
       recordMistake(ex, course.id);
+      fbEl.appendChild(makeAskCoachBtn(ex, course.name, null));
       dingBad();
     }
     renderFeedScore();
@@ -1268,6 +1270,26 @@ function addMsg(who, html) {
   return el;
 }
 
+/* "Ask the coach" — jumps into the chat with the missed question pre-loaded */
+function askCoachAbout(ex, courseName, typed) {
+  let text = `I got this ${courseName} question wrong:\n"${ex.q}"`;
+  if (ex.code) text += `\nThe code shown:\n${ex.code}`;
+  if (ex.a && (ex.t === "type" || ex.t === "code")) text += `\nCorrect answer: ${ex.a}`;
+  else if (ex.choices) text += `\nCorrect answer: ${ex.choices[ex.a]}`;
+  if (typed) text += `\nMy answer: ${typed}`;
+  text += "\nCan you explain it simply?";
+  openCoach();
+  coachSend(text);
+}
+
+function makeAskCoachBtn(ex, courseName, typed) {
+  const b = document.createElement("button");
+  b.className = "ask-coach-btn";
+  b.textContent = "💬 Ask the coach";
+  b.addEventListener("click", () => askCoachAbout(ex, courseName, typed));
+  return b;
+}
+
 function coachSystemPrompt() {
   const spots = weakSpots().slice(0, 5).map((w) => `[${w.course.name}] ${w.ex.q}`).join("; ");
   const name = profile && profile.name !== "Guest" ? profile.name : "the student";
@@ -1321,12 +1343,18 @@ $("chatForm").addEventListener("submit", (e) => {
 
 function openCoach() {
   show("coachScreen");
+  $("coachBack").classList.toggle("hidden", !lesson);
   if (!$("chatLog").children.length) {
     const name = profile && profile.name !== "Guest" ? ", " + profile.name : "";
     addMsg("ai", `Hey${escapeHtml(name)}! 👋 I'm your coding coach. Ask me anything — what an error means, how a loop works, which language to learn next… I also know your weak spots from Targeted Practice, so ask me what to work on!`);
   }
   setTimeout(() => $("chatInput").focus(), 100);
 }
+
+$("coachBack").addEventListener("click", () => {
+  if (lesson) show("lessonScreen");
+  else show("homeScreen");
+});
 
 /* ===================== Profile sheet ===================== */
 function openProfile() {

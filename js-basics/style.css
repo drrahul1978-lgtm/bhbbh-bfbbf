@@ -628,11 +628,29 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
 /* ===================== AI coach chat ===================== */
 #coachScreen { height: 100vh; display: flex; flex-direction: column; }
 .coach-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
   background: rgba(12, 16, 30, 0.85);
   backdrop-filter: blur(12px);
 }
+
+.ask-coach-btn {
+  display: block;
+  margin-top: 10px;
+  background: rgba(124, 92, 255, 0.15);
+  border: 1px solid var(--accent);
+  color: #d6caff;
+  border-radius: 99px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  animation: slideUp 0.25s ease;
+}
+.ask-coach-btn:hover { background: rgba(124, 92, 255, 0.28); }
 .coach-top h2 { font-size: 1.15rem; }
 .coach-top p { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
 #chatLog {
