@@ -2391,6 +2391,54 @@ EXTRA_UNITS.python = [
       },
     ],
   },
+  {
+    title: "Unit 15 · Python on the Web",
+    desc: "Build real websites with Flask",
+    lessons: [
+      {
+        title: "Hello, Flask",
+        exercises: [
+          mc("Which Python library lets you build websites?", null,
+            ["Flask (Django too!)", "math", "random", "websites.py"]),
+          mc("How do you install Flask on your computer?", null,
+            ["pip install flask", "import flask from internet", "download flask.exe", "flask --install"]),
+          mc('What does @app.route("/") mean?', null,
+            ["Run this function when someone visits the homepage", "Delete the homepage", "Create a folder called /", "Restart the app"]),
+          fill("Make a page at /about", '@app.___("/about")\ndef about():\n    return "About us!"', ["route", "page", "url"]),
+          mc("What does app.run(debug=True) do?", null,
+            ["Starts your web server (and auto-reloads when you edit code)", "Deletes bugs", "Publishes to the internet", "Runs the tests"]),
+        ],
+      },
+      {
+        title: "Color & Images",
+        exercises: [
+          mc("What does the visitor see?", '@app.route("/")\ndef home():\n    return "<h1 style=\'color: hotpink\'>Hi!</h1>"',
+            ["A pink heading saying Hi! — Python can return HTML!", "The text with all the tags shown", "An error — Python can't do HTML", "A blank page"]),
+          fill("Make the heading red", "return \"<h1 style='color: ___'>Hello</h1>\"", ["red", "color-red", "#red"]),
+          mc("How do you show cat.png on your Flask site?", null,
+            ['Put it in the static folder and return \'<img src="/static/cat.png">\'', "Email it to Flask", "print(cat.png)", "Images need PHP"]),
+          mc("What is the static folder for?", null,
+            ["Files that don't change — images, CSS, downloads", "Broken code", "Old versions", "Secret files"]),
+          mc('What does render_template("home.html") do?', null,
+            ["Loads a full HTML file from the templates folder", "Draws a picture", "Renders 3D graphics", "Restarts the server"]),
+        ],
+      },
+      {
+        title: "Your Web App",
+        exercises: [
+          mc("What is the output… in your browser?", 'from flask import Flask\napp = Flask(__name__)\n\n@app.route("/")\ndef home():\n    return "Welcome!"\n\napp.run()',
+            ["A web page saying Welcome! at localhost:5000", "Welcome! in the terminal only", "An email", "Nothing"]),
+          mc("A route like @app.route(\"/shop\") means visitors find it at…", null,
+            ["yoursite.com/shop", "yoursite.com", "shop.yoursite.com", "It's hidden"]),
+          mc("How does your Python page get CSS styling?", null,
+            ["Link a CSS file from the static folder in your HTML", "CSS doesn't work with Python", "pip install css", "Use print(css)"]),
+          codeEx("⌨️ Your turn — write the decorator line that makes the function below serve the homepage", '@app.route("/")'),
+          mc("Flask + what you learned in the HTML & CSS courses =", null,
+            ["Real, styled, working websites 🎉", "Only text pages", "Just math", "Nothing useful"]),
+        ],
+      },
+    ],
+  },
 ];
 
 EXTRA_UNITS.js = [
