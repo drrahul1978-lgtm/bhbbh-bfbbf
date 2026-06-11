@@ -113,6 +113,20 @@
     <div id="targetFeed"></div>
   </main>
 
+  <!-- ===== Code playground ===== -->
+  <main id="playScreen" class="hidden">
+    <div class="play-top">
+      <select id="playLang" title="Choose a language"></select>
+      <button id="playRun" class="play-run">▶ Run</button>
+    </div>
+    <textarea id="playEditor" class="play-editor" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="// write some code…"></textarea>
+    <div class="play-out-wrap">
+      <div class="play-out-label" id="playOutLabel">Output</div>
+      <pre id="playOut" class="play-out">Press ▶ Run to see your output here.</pre>
+      <iframe id="playPreview" class="play-preview hidden" sandbox="allow-scripts allow-modals" title="Preview"></iframe>
+    </div>
+  </main>
+
   <!-- ===== AI coach chat ===== -->
   <main id="coachScreen" class="hidden">
     <div class="coach-top">
@@ -134,6 +148,7 @@
     <button id="navLearn" class="nav-btn active"><span>📚</span>Learn</button>
     <button id="navPractice" class="nav-btn"><span>♾️</span>Practice</button>
     <button id="navTarget" class="nav-btn"><span>🎯</span>Target</button>
+    <button id="navPlay" class="nav-btn"><span>🧪</span>Code</button>
     <button id="navCoach" class="nav-btn"><span>🤖</span>Coach</button>
     <button id="navProfile" class="nav-btn"><span>👤</span>Profile</button>
   </nav>
