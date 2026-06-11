@@ -76,6 +76,42 @@ function allExercises(units) {
   return units.flatMap((u) => u.lessons.flatMap((l) => l.exercises));
 }
 
+/* A drill unit of pure arithmetic-output questions, built from a
+ * language's print wrapper so the code is always real syntax. */
+function numbersUnit(wrap, num) {
+  return {
+    title: `Unit ${num} · Number Ninja`,
+    desc: "Speed-run arithmetic in code",
+    lessons: [
+      {
+        title: "Quick Math I",
+        exercises: [
+          typeEx("Type the output of this code", wrap("7 + 8"), "15"),
+          mc("What is the output?", wrap("12 - 5"), ["7", "6", "8", "17"]),
+          typeEx("Type the output of this code", wrap("3 * 7"), "21"),
+          mc("What is the output?", wrap("(9 - 4) * 3"), ["15", "23", "12", "27"]),
+          typeEx("Type the output of this code", wrap("100 - 25"), "75"),
+          mc("What is the output?", wrap("6 * 6"), ["36", "12", "66", "30"]),
+        ],
+      },
+      {
+        title: "Quick Math II",
+        exercises: [
+          mc("What is the output?", wrap("2 * (10 - 6)"), ["8", "14", "20", "4"]),
+          typeEx("Type the output of this code", wrap("45 + 55"), "100"),
+          mc("What is the output?", wrap("9 * 9"), ["81", "18", "99", "72"]),
+          typeEx("Type the output of this code", wrap("60 - 12"), "48"),
+          mc("What is the output?", wrap("(3 + 3) * (2 + 2)"), ["24", "12", "36", "10"]),
+          typeEx("Type the output of this code", wrap("7 * 11"), "77"),
+        ],
+      },
+    ],
+  };
+}
+
+/* Print wrappers for hand-written courses that also get a Number Ninja unit */
+const NUM_WRAP = { js: (e) => `console.log(${e});` };
+
 /* Appends Review + Mastery units built from a course's own exercises */
 function withReviewUnits(units, startNum) {
   const pool = allExercises(units);
@@ -327,6 +363,7 @@ function buildCourse(meta, g, x) {
   ];
   const extra = (typeof EXTRA_UNITS !== "undefined" && EXTRA_UNITS[meta.id]) || [];
   const all = [...units, ...extra];
+  all.push(numbersUnit(x.wrap, all.length + 1));
   return { ...meta, units: withReviewUnits(all, all.length + 1) };
 }
 
@@ -661,6 +698,36 @@ const HTML_UNITS = [
       },
     ],
   },
+  {
+    title: "Unit 4 · The <head> & Attributes",
+    desc: "Page setup and element superpowers",
+    lessons: [
+      {
+        title: "Inside the <head>",
+        exercises: [
+          mc("What does the <title> tag control?", null,
+            ["The text shown in the browser tab", "The biggest heading", "The page's font", "The URL"]),
+          fill("Tell the browser which characters to use", '<meta ___="UTF-8">', ["charset", "encoding", "letters"]),
+          mc("Which line loads a CSS file?", null,
+            ['<link rel="stylesheet" href="style.css">', '<css src="style.css">', '<style href="style.css">', '<load css="style.css">']),
+          mc("Which line loads a JavaScript file?", null,
+            ['<script src="app.js"></script>', '<js href="app.js">', '<javascript src="app.js">', '<run file="app.js">']),
+        ],
+      },
+      {
+        title: "Attributes",
+        exercises: [
+          mc("What is the difference between id and class?", null,
+            ["id must be unique on the page; class can be reused", "They are identical", "class must be unique", "id is only for forms"]),
+          mc('Can an element have class="card big"?', null,
+            ["Yes — that's TWO classes at once", "No — one class only", "Only on divs", "Only with commas"]),
+          fill("Give this element a unique name", '<div ___="main-menu">', ["id", "name", "key"]),
+          mc('What does style="color: red" on a tag do?', null,
+            ["Applies CSS directly to that one element", "Colors the whole page", "Nothing without a stylesheet", "Renames the tag"]),
+        ],
+      },
+    ],
+  },
 ];
 
 /* =====================================================================
@@ -747,6 +814,36 @@ const CSS_UNITS = [
           fill("Animate changes smoothly over 0.3 seconds", "transition: all 0.3___;", ["s", "px", "x"]),
           mc("transform: scale(1.1) makes an element…", null, ["10% bigger", "10% smaller", "Rotated 1.1°", "1.1px wider"]),
           mc("Which makes the mouse pointer a hand over a button?", null, ["cursor: pointer", "mouse: hand", "pointer: hand", "hover: grab"]),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 4 · Units & Position",
+    desc: "Sizes that adapt, layers that stick",
+    lessons: [
+      {
+        title: "Sizing Units",
+        exercises: [
+          mc("width: 50% means…", null,
+            ["Half the width of the parent element", "50 pixels", "Half the screen always", "50 characters"]),
+          mc("What is 100vh?", null,
+            ["The full height of the viewport (screen)", "100 pixels", "Very high priority", "100% of the parent"]),
+          mc("1em is relative to…", null,
+            ["The element's font size", "One pixel", "The screen width", "The em dash"]),
+          fill("Make it half the parent's width", "width: 50___;", ["%", "px", "em"]),
+        ],
+      },
+      {
+        title: "Position & Layers",
+        exercises: [
+          mc("position: fixed makes an element…", null,
+            ["Stay in place even when you scroll", "Unbreakable", "Centered", "Invisible"]),
+          mc("position: absolute places an element…", null,
+            ["Relative to its nearest positioned ancestor", "In the exact screen center", "At the top always", "Randomly"]),
+          mc("Which property decides what's on TOP when elements overlap?", null,
+            ["z-index", "layer", "depth", "top-most"]),
+          fill("Make the header stick to the top while scrolling", "position: ___;\ntop: 0;", ["sticky", "stuck", "glue"]),
         ],
       },
     ],
@@ -839,6 +936,34 @@ const SQL_UNITS = [
           mc("Which gives the average of a column?", null, ["AVG(score)", "MEAN(score)", "MID(score)", "AVERAGE ALL"]),
           mc("Why use query parameters instead of pasting user text into SQL?", null,
             ["To prevent SQL injection attacks", "It runs faster", "It looks nicer", "Parameters are required"]),
+        ],
+      },
+    ],
+  },
+  {
+    title: "Unit 4 · Sorting & NULL",
+    desc: "Order results, handle the unknown",
+    lessons: [
+      {
+        title: "Sorting & Sets",
+        exercises: [
+          fill("Highest scores first", "SELECT * FROM scores ORDER BY points ___;", ["DESC", "DOWN", "HIGH"]),
+          mc("Without ASC or DESC, ORDER BY sorts…", null,
+            ["Ascending (smallest first)", "Descending", "Randomly", "By row id"]),
+          mc("WHERE city IN ('Rome', 'Paris') matches…", null,
+            ["Rows whose city is Rome OR Paris", "Rows in both cities", "Cities containing those letters", "Nothing — invalid"]),
+          fill("Match either of the two cities", "WHERE city ___ ('Rome', 'Paris');", ["IN", "OF", "AT"]),
+        ],
+      },
+      {
+        title: "NULL & NOT",
+        exercises: [
+          mc("How do you find rows where phone is missing?", null,
+            ["WHERE phone IS NULL", "WHERE phone = NULL", "WHERE phone == NULL", "WHERE phone EMPTY"]),
+          fill("Only rows that HAVE a phone number", "WHERE phone IS ___ NULL;", ["NOT", "NO", "ANTI"]),
+          mc("What does NOT do in a WHERE clause?", null,
+            ["Reverses a condition", "Deletes rows", "Sorts backwards", "Comments it out"]),
+          mc("Which means NOT EQUAL in SQL?", null, ["<>", "!==", "=/=", "~="]),
         ],
       },
     ],
@@ -2428,6 +2553,7 @@ const COURSES = [
 ].map((meta) => {
   if (meta.units) {
     const all = [...meta.units, ...(EXTRA_UNITS[meta.id] || [])];
+    if (NUM_WRAP[meta.id]) all.push(numbersUnit(NUM_WRAP[meta.id], all.length + 1));
     return { ...meta, units: withReviewUnits(all, all.length + 1) };
   }
   return buildCourse(meta, SPEC[meta.id], { ...EXT[meta.id], ...EXT2[meta.id] });

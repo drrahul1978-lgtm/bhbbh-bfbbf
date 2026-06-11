@@ -182,8 +182,8 @@ function firstIncompleteIndex(course) {
 
 /* ===================== DOM helpers ===================== */
 const $ = (id) => document.getElementById(id);
-const SCREENS = ["authScreen", "homeScreen", "courseScreen", "lessonScreen", "resultScreen", "practiceScreen", "targetScreen", "coachScreen"];
-const FULLSCREEN_TABS = ["lessonScreen", "practiceScreen", "targetScreen", "coachScreen"];
+const SCREENS = ["authScreen", "homeScreen", "courseScreen", "lessonScreen", "resultScreen", "practiceScreen", "targetScreen", "coachScreen", "playScreen"];
+const FULLSCREEN_TABS = ["lessonScreen", "practiceScreen", "targetScreen", "coachScreen", "playScreen"];
 
 function show(id) {
   SCREENS.forEach((s) => $(s).classList.toggle("hidden", s !== id));
@@ -197,6 +197,7 @@ function show(id) {
   $("navLearn").classList.toggle("active", id === "homeScreen" || id === "courseScreen");
   $("navPractice").classList.toggle("active", id === "practiceScreen");
   $("navTarget").classList.toggle("active", id === "targetScreen");
+  $("navPlay").classList.toggle("active", id === "playScreen");
   $("navCoach").classList.toggle("active", id === "coachScreen");
   if (id !== "practiceScreen" && id !== "targetScreen") window.scrollTo(0, 0);
 }
@@ -1356,6 +1357,143 @@ $("coachBack").addEventListener("click", () => {
   else show("homeScreen");
 });
 
+/* ===================== Code playground =====================
+ * JS runs instantly in a sandboxed iframe; HTML/CSS render a live
+ * preview; most other languages run on real compilers via the free
+ * Wandbox API (wandbox.org). */
+const WANDBOX_URL = "https://wandbox.org/api/compile.json";
+
+const PLAY = {
+  js: { mode: "js", starter: 'console.log("Hello, World!");\n\nfor (let i = 1; i <= 3; i++) {\n  console.log("Count: " + i);\n}' },
+  html: { mode: "html", starter: "<h1>Hello!</h1>\n<p>Edit me, then press Run to see the page.</p>\n<button onclick=\"alert('You clicked!')\">Click me</button>" },
+  css: { mode: "css", starter: "h1 {\n  color: hotpink;\n}\n\np {\n  font-family: sans-serif;\n  color: #444;\n}\n\nbutton {\n  background: gold;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 8px;\n}" },
+  sql: { mode: "wandbox", compiler: "sqlite-3.46.1", starter: "CREATE TABLE users (name TEXT, age INT);\nINSERT INTO users VALUES ('Ada', 36), ('Linus', 55);\nSELECT * FROM users WHERE age > 40;" },
+  python: { mode: "wandbox", compiler: "cpython-3.13.8", starter: 'print("Hello, World!")\n\nfor i in range(1, 4):\n    print("Count:", i)' },
+  typescript: { mode: "wandbox", compiler: "typescript-5.6.2", starter: 'const greet = (name: string): string => `Hi ${name}`;\nconsole.log(greet("World"));' },
+  java: { mode: "wandbox", compiler: "openjdk-jdk-22+36", starter: 'class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}' },
+  csharp: { mode: "wandbox", compiler: "mono-6.12.0.199", starter: 'using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, World!");\n    }\n}' },
+  cpp: { mode: "wandbox", compiler: "gcc-13.2.0", starter: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}' },
+  c: { mode: "wandbox", compiler: "gcc-13.2.0-c", starter: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}' },
+  go: { mode: "wandbox", compiler: "go-1.23.2", starter: 'package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, World!")\n}' },
+  rust: { mode: "wandbox", compiler: "rust-1.82.0", starter: 'fn main() {\n    println!("Hello, World!");\n}' },
+  php: { mode: "wandbox", compiler: "php-8.3.12", starter: '<?php\necho "Hello, World!\\n";\nfor ($i = 1; $i <= 3; $i++) {\n    echo "Count: $i\\n";\n}' },
+  ruby: { mode: "wandbox", compiler: "ruby-3.4.9", starter: 'puts "Hello, World!"\n\n3.times do |i|\n  puts "Count: #{i + 1}"\nend' },
+  swift: { mode: "wandbox", compiler: "swift-6.0.1", starter: 'print("Hello, World!")\n\nfor i in 1...3 {\n    print("Count: \\(i)")\n}' },
+  scala: { mode: "wandbox", compiler: "scala-2.13.15", starter: 'object Main {\n  def main(args: Array[String]): Unit = {\n    println("Hello, World!")\n  }\n}' },
+  haskell: { mode: "wandbox", compiler: "ghc-9.10.1", starter: 'main :: IO ()\nmain = do\n  putStrLn "Hello, World!"\n  mapM_ print [1, 2, 3]' },
+  julia: { mode: "wandbox", compiler: "julia-1.10.5", starter: 'println("Hello, World!")\n\nfor i in 1:3\n    println("Count: $i")\nend' },
+  elixir: { mode: "wandbox", compiler: "elixir-1.17.3", starter: 'IO.puts("Hello, World!")\n\nEnum.each(1..3, fn i ->\n  IO.puts("Count: #{i}")\nend)' },
+  pascal: { mode: "wandbox", compiler: "fpc-3.2.2", starter: "program Hello;\nvar\n  i: Integer;\nbegin\n  writeln('Hello, World!');\n  for i := 1 to 3 do\n    writeln('Count: ', i);\nend." },
+  bash: { mode: "wandbox", compiler: "bash", starter: 'echo "Hello, World!"\n\nfor i in 1 2 3; do\n  echo "Count: $i"\ndone' },
+  lua: { mode: "wandbox", compiler: "lua-5.4.7", starter: 'print("Hello, World!")\n\nfor i = 1, 3 do\n  print("Count: " .. i)\nend' },
+  r: { mode: "wandbox", compiler: "r-4.4.1", starter: 'cat("Hello, World!\\n")\n\nfor (i in 1:3) {\n  cat("Count:", i, "\\n")\n}' },
+  perl: { mode: "wandbox", compiler: "perl-5.42.0", starter: 'print "Hello, World!\\n";\n\nfor my $i (1..3) {\n    print "Count: $i\\n";\n}' },
+  kotlin: { mode: "none", starter: 'fun main() {\n    println("Hello, World!")\n}' },
+  dart: { mode: "none", starter: "void main() {\n  print('Hello, World!');\n}" },
+  matlab: { mode: "none", starter: "disp('Hello, World!')" },
+  objc: { mode: "none", starter: '#import <Foundation/Foundation.h>\n\nint main() {\n    NSLog(@"Hello, World!");\n    return 0;\n}' },
+  vb: { mode: "none", starter: 'Module Program\n    Sub Main()\n        Console.WriteLine("Hello, World!")\n    End Sub\nEnd Module' },
+};
+
+const playBuffers = {};
+let playCurrent = "js";
+
+function initPlayground() {
+  const sel = $("playLang");
+  sel.innerHTML = COURSES.filter((c) => PLAY[c.id])
+    .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}${PLAY[c.id].mode === "none" ? " (read-only)" : ""}</option>`)
+    .join("");
+  sel.value = playCurrent;
+  $("playEditor").value = PLAY[playCurrent].starter;
+  sel.addEventListener("change", () => {
+    playBuffers[playCurrent] = $("playEditor").value;
+    playCurrent = sel.value;
+    $("playEditor").value = playBuffers[playCurrent] ?? PLAY[playCurrent].starter;
+    showPlayOut(PLAY[playCurrent].mode === "none"
+      ? "ℹ️ This language needs a full toolchain and can't run in the browser yet — but JS, Python, Java, C++ and 20 others can!"
+      : "Press ▶ Run to see your output here.");
+  });
+  // Tab inserts two spaces instead of leaving the editor
+  $("playEditor").addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const t = e.target;
+      const s = t.selectionStart;
+      t.value = t.value.slice(0, s) + "  " + t.value.slice(t.selectionEnd);
+      t.selectionStart = t.selectionEnd = s + 2;
+    }
+  });
+  $("playRun").addEventListener("click", runPlayground);
+}
+
+function showPlayOut(text) {
+  $("playPreview").classList.add("hidden");
+  $("playOut").classList.remove("hidden");
+  $("playOut").textContent = text;
+}
+
+function showPlayPreview(srcdoc) {
+  $("playOut").classList.add("hidden");
+  $("playPreview").classList.remove("hidden");
+  $("playPreview").srcdoc = srcdoc;
+}
+
+let playMsgHandler = null;
+function runJsLocally(code) {
+  showPlayOut("⏳ Running…");
+  const tag = "kodexa-run-" + Date.now();
+  if (playMsgHandler) window.removeEventListener("message", playMsgHandler);
+  playMsgHandler = (e) => {
+    if (!e.data || e.data.tag !== tag) return;
+    showPlayOut(e.data.lines.length ? e.data.lines.join("\n") : "(no output — try console.log!)");
+  };
+  window.addEventListener("message", playMsgHandler);
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.srcdoc = "<scr" + "ipt>" +
+    "const lines=[];" +
+    'const fmt=(x)=>{try{return typeof x==="object"?JSON.stringify(x):String(x);}catch(e){return String(x);}};' +
+    "const P=(...a)=>lines.push(a.map(fmt).join(' '));" +
+    "console.log=P;console.warn=P;console.error=(...a)=>P('⚠️',...a);" +
+    "try{eval(" + JSON.stringify(code) + ");}catch(e){P('⚠️ '+e.message);}" +
+    "setTimeout(()=>parent.postMessage({tag:" + JSON.stringify(tag) + ",lines},'*'),250);" +
+    "</scr" + "ipt>";
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 4000);
+}
+
+async function runWandbox(compiler, code) {
+  showPlayOut("⏳ Running on a real compiler in the cloud… (a few seconds)");
+  try {
+    const res = await fetch(WANDBOX_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ compiler, code }),
+    });
+    const d = await res.json();
+    let out = "";
+    if (d.compiler_error) out += "🛠️ Compiler says:\n" + d.compiler_error + "\n";
+    if (d.program_output) out += d.program_output;
+    if (d.program_error) out += "⚠️ " + d.program_error;
+    showPlayOut(out.trim() || "(no output)");
+  } catch (e) {
+    showPlayOut("⚠️ Couldn't reach the cloud runner — check your connection and try again.");
+  }
+}
+
+function runPlayground() {
+  const cfg = PLAY[playCurrent];
+  const code = $("playEditor").value;
+  sfx.select();
+  if (cfg.mode === "js") runJsLocally(code);
+  else if (cfg.mode === "html") showPlayPreview(code);
+  else if (cfg.mode === "css") showPlayPreview(
+    `<style>${code}</style><h1>Style me!</h1><p>This paragraph is your canvas. Change the CSS and press Run again.</p><button>A button</button>`);
+  else if (cfg.mode === "wandbox") runWandbox(cfg.compiler, code);
+  else showPlayOut("ℹ️ This language needs a full toolchain and can't run in the browser yet — but JS, Python, Java, C++ and 20 others can!");
+}
+
 /* ===================== Profile sheet ===================== */
 function openProfile() {
   const lessonsDone = Object.keys(state.completed).length;
@@ -1405,6 +1543,7 @@ $("navTarget").addEventListener("click", () => {
   renderTarget();
   show("targetScreen");
 });
+$("navPlay").addEventListener("click", () => show("playScreen"));
 $("navCoach").addEventListener("click", openCoach);
 $("navProfile").addEventListener("click", openProfile);
 $("avatarBtn").addEventListener("click", openProfile);
@@ -1412,5 +1551,6 @@ $("avatarBtn").addEventListener("click", openProfile);
 /* ===================== Boot ===================== */
 initAuth();
 initPracticeFilter();
+initPlayground();
 if (profile) enterApp();
 else show("authScreen");
