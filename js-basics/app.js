@@ -33,7 +33,67 @@ function loadState() {
   } catch (e) { /* ignore */ }
   return s;
 }
-function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleCloudSave();
+}
+
+/* ===================== Real sign-in & cloud sync (Firebase) =====================
+ * Active only when firebase-config.js provides FIREBASE_CONFIG; otherwise the
+ * app falls back to simulated, on-device sign-in. */
+const firebaseEnabled =
+  typeof firebase !== "undefined" && typeof FIREBASE_CONFIG !== "undefined" && !!FIREBASE_CONFIG;
+let fbAuth = null;
+let fbDb = null;
+let cloudUid = null;
+let cloudSaveTimer = null;
+
+if (firebaseEnabled) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbAuth.onAuthStateChanged(handleCloudUser);
+}
+
+/* Combine device progress with cloud progress: keep the best of both. */
+function mergeStates(a, b) {
+  const merged = { ...a };
+  merged.xp = Math.max(a.xp || 0, b.xp || 0);
+  merged.gems = Math.max(a.gems || 0, b.gems || 0);
+  merged.streak = Math.max(a.streak || 0, b.streak || 0);
+  merged.lastDay = [a.lastDay, b.lastDay].filter(Boolean).sort().pop() || null;
+  merged.completed = { ...(b.completed || {}), ...(a.completed || {}) };
+  merged.chests = { ...(b.chests || {}), ...(a.chests || {}) };
+  return merged;
+}
+
+async function handleCloudUser(user) {
+  if (!user) return;
+  cloudUid = user.uid;
+  try {
+    const snap = await fbDb.collection("users").doc(user.uid).get();
+    if (snap.exists && snap.data().state) state = mergeStates(state, snap.data().state);
+  } catch (e) { /* offline or rules issue — keep local state */ }
+  const providerId = (user.providerData[0] || {}).providerId || "";
+  saveProfile({
+    name: user.displayName || (user.email || "Coder").split("@")[0],
+    email: user.email || "",
+    method: providerId === "google.com" ? "Google" : providerId === "apple.com" ? "Apple" : "Email",
+    joined: (profile && profile.joined) || todayStr(),
+  });
+  saveState(); // persists the merged progress locally and to the cloud
+  enterApp();
+}
+
+function scheduleCloudSave() {
+  if (!fbDb || !cloudUid) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => {
+    fbDb.collection("users").doc(cloudUid)
+      .set({ state, name: profile ? profile.name : "", updated: new Date().toISOString() })
+      .catch(() => { /* retried on next save */ });
+  }, 1500);
+}
 
 function loadProfile() {
   try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch (e) { return null; }
@@ -193,14 +253,30 @@ function mascotSVG(color) {
 /* ===================== Auth ===================== */
 function initAuth() {
   $("authLogo").innerHTML = mascotSVG("#7c5cff");
+  if (firebaseEnabled) {
+    $("authNote").textContent = "Real sign-in is enabled — your account and progress sync to the cloud.";
+    $("authPassword").classList.remove("hidden");
+  }
+
   document.querySelectorAll("#authButtons [data-method]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const method = btn.dataset.method;
-      const name = prompt(`What should we call you? (${method} sign-in is simulated — everything stays on this device)`, "Coder");
-      if (name === null) return;
-      completeAuth({ name: name.trim() || "Coder", email: `${method.toLowerCase()}-user@device.local`, method });
+      if (firebaseEnabled) {
+        const provider = method === "Apple"
+          ? new firebase.auth.OAuthProvider("apple.com")
+          : new firebase.auth.GoogleAuthProvider();
+        fbAuth.signInWithPopup(provider).catch((err) => {
+          alert(`${method} sign-in failed: ${err.message}` +
+            (method === "Apple" ? "\n\nNote: Apple sign-in also needs an Apple Developer account configured in Firebase." : ""));
+        });
+      } else {
+        const name = prompt(`What should we call you? (${method} sign-in is simulated until Firebase is configured — see firebase-config.js. Everything stays on this device.)`, "Coder");
+        if (name === null) return;
+        completeAuth({ name: name.trim() || "Coder", email: `${method.toLowerCase()}-user@device.local`, method });
+      }
     });
   });
+
   $("emailBtn").addEventListener("click", () => {
     $("authButtons").classList.add("hidden");
     $("emailForm").classList.remove("hidden");
@@ -210,10 +286,33 @@ function initAuth() {
     $("emailForm").classList.add("hidden");
     $("authButtons").classList.remove("hidden");
   });
-  $("emailForm").addEventListener("submit", (e) => {
+
+  $("emailForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    completeAuth({ name: $("authName").value.trim() || "Coder", email: $("authEmail").value.trim(), method: "Email" });
+    const name = $("authName").value.trim() || "Coder";
+    const email = $("authEmail").value.trim();
+    if (!firebaseEnabled) {
+      completeAuth({ name, email, method: "Email" });
+      return;
+    }
+    const pass = $("authPassword").value;
+    if (pass.length < 6) { alert("Please use a password with at least 6 characters."); return; }
+    try {
+      const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      saveProfile({ ...(profile || {}), name, email, method: "Email", joined: todayStr() });
+      renderHeader();
+      renderHome();
+    } catch (err) {
+      if (err.code === "auth/email-already-in-use") {
+        try { await fbAuth.signInWithEmailAndPassword(email, pass); }
+        catch (err2) { alert("Sign-in failed: " + err2.message); }
+      } else {
+        alert("Sign-up failed: " + err.message);
+      }
+    }
   });
+
   $("guestBtn").addEventListener("click", () => completeAuth({ name: "Guest", email: "", method: "Guest" }));
 }
 
@@ -918,6 +1017,8 @@ function openProfile() {
   $("profileSheet").classList.remove("hidden");
   $("sheetClose").addEventListener("click", closeProfile);
   $("sheetSignout").addEventListener("click", () => {
+    if (fbAuth && fbAuth.currentUser) fbAuth.signOut().catch(() => {});
+    cloudUid = null;
     localStorage.removeItem(PROFILE_KEY);
     profile = null;
     closeProfile();

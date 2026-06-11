@@ -19,8 +19,13 @@ language's real syntax.
 ## Features
 
 - 🔐 **Welcome screen** — continue with Apple / Google / email or as a guest.
-  Sign-in is simulated: the profile (and all progress) is stored only in your
-  browser's localStorage; nothing is ever sent to a server.
+  By default sign-in is simulated (profile + progress stay in localStorage).
+  **Real sign-in is supported:** create a free Firebase project, enable the
+  Google and Email providers, and paste the config into `firebase-config.js`
+  (full step-by-step instructions are in that file). The site then uses the
+  real Google login popup, real email+password accounts, and syncs progress
+  to Firestore so it follows you across devices. Apple sign-in works too but
+  additionally requires an Apple Developer account.
 - 📚 **Learn tab** — course catalog with per-course progress, unit lists,
   linear lesson unlocking and treasure chests that pay out gems 💎.
 - ♾️ **Practice tab** — an endless, full-screen scrolling feed of questions
