@@ -1,359 +1,46 @@
-/* Kodexa — a Duolingo-style game for learning JavaScript basics.
- * Pure client-side: progress (XP, streak, completed lessons) lives in localStorage. */
+/* Kodexa — a game-like academy for learning to code.
+ * 21 courses (see courses.js), lessons with hearts/XP/streaks, and an
+ * endless swipe-style practice feed. Fully client-side: the profile and
+ * all progress live in this browser's localStorage. */
 
 "use strict";
 
-/* ===================== Course content =====================
- * Exercise types:
- *   mc    — multiple choice            {t,q,code?,choices,a}
- *   fill  — pick a chip to fill ___    {t,q,code (contains ___),choices,a}
- *   order — arrange chips into code    {t,q,tokens}
- *   type  — type the answer            {t,q,code?,a,alt?}
- */
-const UNITS = [
-  {
-    title: "Unit 1 · First Steps",
-    desc: "Say hello to JavaScript",
-    color: "#58cc02", colorDark: "#46a302", icon: "👋",
-    lessons: [
-      {
-        title: "Hello, World!",
-        exercises: [
-          { t: "mc", q: "What does this code do?", code: 'console.log("Hello!");',
-            choices: ["Prints Hello! to the console", "Shows a popup window", "Saves a file called Hello", "Nothing — it's a comment"], a: 0 },
-          { t: "order", q: "Build the code: print \"Hi\" to the console",
-            tokens: ["console", ".", "log", "(", '"Hi"', ")", ";"] },
-          { t: "mc", q: "What is the output?", code: "console.log(123);",
-            choices: ["123", '"123"', "console", "Nothing"], a: 0 },
-          { t: "fill", q: "Fill in the blank to print a message", code: '___("Good morning");',
-            choices: ["console.log", "print", "echo"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "console.log(5);", a: "5" },
-          { t: "mc", q: "Where can JavaScript run?",
-            choices: ["In browsers and on servers (Node.js)", "Only inside Microsoft Word", "Only on phones", "Only on calculators"], a: 0 },
-        ],
-      },
-      {
-        title: "Comments & Syntax",
-        exercises: [
-          { t: "mc", q: "Which symbol starts a single-line comment?",
-            choices: ["//", "##", "<!--", "**"], a: 0 },
-          { t: "fill", q: "Turn this line into a comment", code: "___ remind me to drink water",
-            choices: ["//", "\\\\", "%%"], a: 0 },
-          { t: "mc", q: "How do you write a comment that spans many lines?",
-            choices: ["/* like this */", "// like this //", "(( like this ))", "## like this ##"], a: 0 },
-          { t: "mc", q: "What happens to comments when code runs?",
-            choices: ["They are ignored completely", "They print to the console", "They cause errors", "They run twice"], a: 0 },
-          { t: "order", q: "Build a single-line comment that says: my first comment",
-            tokens: ["//", "my", "first", "comment"] },
-          { t: "mc", q: "Which character usually ends a JavaScript statement?",
-            choices: [";", ":", ".", "!"], a: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 2 · Variables",
-    desc: "Boxes that store your data",
-    color: "#1cb0f6", colorDark: "#1899d6", icon: "📦",
-    lessons: [
-      {
-        title: "Declaring Variables",
-        exercises: [
-          { t: "mc", q: "Which keyword declares a variable whose value can change?",
-            choices: ["let", "make", "variable", "new"], a: 0 },
-          { t: "order", q: "Build the code: store 13 in a variable called age",
-            tokens: ["let", "age", "=", "13", ";"] },
-          { t: "fill", q: "Fill in the blank to assign a value", code: 'let name ___ "Ada";',
-            choices: ["=", "==", "=>"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "let score = 10;\nconsole.log(score);",
-            choices: ["10", "score", '"score"', "undefined"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "let x = 7;\nconsole.log(x);", a: "7" },
-          { t: "mc", q: "Which is a valid variable name?",
-            choices: ["myScore", "2cool", "my-score", "let"], a: 0 },
-        ],
-      },
-      {
-        title: "const vs let",
-        exercises: [
-          { t: "mc", q: "What does const mean?",
-            choices: ["The variable can't be reassigned", "The variable is secret", "The variable is a number", "The variable updates constantly"], a: 0 },
-          { t: "mc", q: "What happens here?", code: "const pi = 3.14;\npi = 3;",
-            choices: ["An error — you can't reassign a const", "pi becomes 3", "pi becomes 3.14 again", "Nothing"], a: 0 },
-          { t: "fill", q: "Your birthday never changes — pick the best keyword", code: '___ birthday = "June 10";',
-            choices: ["const", "let", "var"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "let x = 1;\nx = 2;\nconsole.log(x);",
-            choices: ["2", "1", "12", "Error"], a: 0 },
-          { t: "order", q: "Build the code: a constant called name holding \"Rahul\"",
-            tokens: ["const", "name", "=", '"Rahul"', ";"] },
-          { t: "mc", q: "Which should you reach for by default in modern JavaScript?",
-            choices: ["const, switching to let only when you need to reassign", "var everywhere", "let everywhere", "No keyword at all"], a: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 3 · Data Types",
-    desc: "Numbers, strings & booleans",
-    color: "#ce82ff", colorDark: "#a560e8", icon: "🧬",
-    lessons: [
-      {
-        title: "Numbers & Strings",
-        exercises: [
-          { t: "mc", q: "What type of value is \"hello\"?",
-            choices: ["string", "number", "boolean", "letter"], a: 0 },
-          { t: "mc", q: "What type of value is 42?",
-            choices: ["number", "string", "integer-string", "digit"], a: 0 },
-          { t: "fill", q: "Make greeting a string", code: "let greeting = ___;",
-            choices: ['"Hello"', "Hello", "(Hello)"], a: 0 },
-          { t: "mc", q: "What is the result of this expression?", code: '"Hi" + " there"',
-            choices: ['"Hi there"', '"Hi+there"', "An error", "0"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: 'console.log(typeof "cat");', a: "string" },
-          { t: "mc", q: "Joining two strings with + is called…",
-            choices: ["concatenation", "addition", "compression", "stringification"], a: 0 },
-        ],
-      },
-      {
-        title: "Booleans & typeof",
-        exercises: [
-          { t: "mc", q: "Which two values can a boolean have?",
-            choices: ["true and false", "yes and no", "1 and 2", "on and off"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "console.log(typeof true);",
-            choices: ['"boolean"', '"true"', '"bool"', '"number"'], a: 0 },
-          { t: "fill", q: "Fill in a boolean value", code: "let isHappy = ___;",
-            choices: ["true", '"yes"', "happy"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "console.log(typeof 99);",
-            choices: ['"number"', '"99"', '"string"', '"integer"'], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "console.log(typeof 3.14);", a: "number" },
-          { t: "mc", q: "Which of these is NOT a JavaScript type?",
-            choices: ["letter", "string", "number", "boolean"], a: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 4 · Operators",
-    desc: "Math, comparisons & logic",
-    color: "#ff9600", colorDark: "#e08600", icon: "➗",
-    lessons: [
-      {
-        title: "Math Time",
-        exercises: [
-          { t: "mc", q: "What is the output? (% gives the remainder)", code: "console.log(7 % 2);",
-            choices: ["1", "3.5", "2", "0"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "console.log(4 * 5);", a: "20" },
-          { t: "fill", q: "Add the price and the tax", code: "let total = price ___ tax;",
-            choices: ["+", "&", "plus"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "console.log(10 / 4);",
-            choices: ["2.5", "2", "3", "2.25"], a: 0 },
-          { t: "mc", q: "What does x += 3 mean?",
-            choices: ["x = x + 3", "x === 3", "x is at least 3", "Add x to 3 and throw it away"], a: 0 },
-          { t: "order", q: "Build the code: store a plus b in a variable called sum",
-            tokens: ["let", "sum", "=", "a", "+", "b", ";"] },
-        ],
-      },
-      {
-        title: "Comparisons & Logic",
-        exercises: [
-          { t: "mc", q: "What is the output?", code: 'console.log(5 === "5");',
-            choices: ["false", "true", "5", "Error"], a: 0 },
-          { t: "mc", q: "Which operator checks value AND type?",
-            choices: ["===", "==", "=", "=>"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "console.log(7 > 3);", a: "true" },
-          { t: "mc", q: "What is the result of true && false?",
-            choices: ["false", "true", "maybe", "Error"], a: 0 },
-          { t: "mc", q: "What does !true evaluate to? (! means NOT)",
-            choices: ["false", "true", "undefined", "Error"], a: 0 },
-          { t: "fill", q: "Both conditions must be true — pick the operator", code: "if (age >= 13 ___ age < 20)",
-            choices: ["&&", "||", "++"], a: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 5 · Conditionals",
-    desc: "Teach your code to decide",
-    color: "#ff4b4b", colorDark: "#ea2b2b", icon: "🚦",
-    lessons: [
-      {
-        title: "Making Decisions",
-        exercises: [
-          { t: "mc", q: "An if block runs when its condition is…",
-            choices: ["true", "false", "a string", "missing"], a: 0 },
-          { t: "fill", q: "Fill in the keyword", code: '___ (temp > 30) {\n  console.log("Hot!");\n}',
-            choices: ["if", "when", "check"], a: 0 },
-          { t: "mc", q: "What is the output?", code: 'let x = 10;\nif (x > 5) {\n  console.log("big");\n}',
-            choices: ["big", "small", "x", "Nothing"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: 'let age = 15;\nif (age >= 13) {\n  console.log("teen");\n}', a: "teen" },
-          { t: "mc", q: "In an if statement, the condition goes inside…",
-            choices: ["parentheses ( )", "curly braces { }", "square brackets [ ]", "quotes \" \""], a: 0 },
-          { t: "order", q: "Build the code: if x is greater than 5",
-            tokens: ["if", "(", "x", ">", "5", ")"] },
-        ],
-      },
-      {
-        title: "Else & Else If",
-        exercises: [
-          { t: "mc", q: "The else block runs when the if condition is…",
-            choices: ["false", "true", "undefined", "an error"], a: 0 },
-          { t: "fill", q: "Fill in the keyword", code: 'if (sunny) {\n  console.log("Beach!");\n} ___ {\n  console.log("Movies!");\n}',
-            choices: ["else", "otherwise", "or"], a: 0 },
-          { t: "mc", q: "What is the output?", code: 'let x = 3;\nif (x > 5) {\n  console.log("big");\n} else {\n  console.log("small");\n}',
-            choices: ["small", "big", "3", "Nothing"], a: 0 },
-          { t: "mc", q: "Which keyword chains a second condition?",
-            choices: ["else if", "elif", "elseif", "also if"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: 'let n = 10;\nif (n % 2 === 0) {\n  console.log("even");\n} else {\n  console.log("odd");\n}', a: "even" },
-          { t: "order", q: "Build the else branch that prints \"nope\"",
-            tokens: ["else", "{", "console.log", "(", '"nope"', ")", ";", "}"] },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 6 · Loops",
-    desc: "Repeat without repeating yourself",
-    color: "#2ec4b6", colorDark: "#21a99c", icon: "🔁",
-    lessons: [
-      {
-        title: "The for Loop",
-        exercises: [
-          { t: "mc", q: "What is the correct order of the three parts in a for loop header?",
-            choices: ["start; condition; update", "condition; start; update", "update; condition; start", "start; update; condition"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "for (let i = 0; i < 3; i++) {\n  console.log(i);\n}",
-            choices: ["0 1 2", "1 2 3", "0 1 2 3", "3"], a: 0 },
-          { t: "fill", q: "Loop while i is less than 5", code: "for (let i = 0; i ___ 5; i++)",
-            choices: ["<", ">", "==="], a: 0 },
-          { t: "type", q: "How many times does this loop run? (type a number)", code: "for (let i = 0; i < 4; i++) {\n  console.log(\"hi\");\n}", a: "4" },
-          { t: "mc", q: "What does i++ do?",
-            choices: ["Adds 1 to i", "Doubles i", "Resets i to 0", "Deletes i"], a: 0 },
-          { t: "order", q: "Build a for loop header counting 0, 1, 2",
-            tokens: ["for", "(", "let i = 0", ";", "i < 3", ";", "i++", ")"] },
-        ],
-      },
-      {
-        title: "The while Loop",
-        exercises: [
-          { t: "mc", q: "A while loop keeps running as long as its condition is…",
-            choices: ["true", "false", "a number", "short"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "let i = 0;\nwhile (i < 2) {\n  console.log(i);\n  i++;\n}",
-            choices: ["0 1", "1 2", "0 1 2", "Nothing"], a: 0 },
-          { t: "fill", q: "Keep looping while lives is greater than 0", code: "while (lives ___ 0)",
-            choices: [">", "<", "==="], a: 0 },
-          { t: "mc", q: "If you forget i++ inside a while loop, you get…",
-            choices: ["An infinite loop", "A syntax error", "A faster loop", "Exactly one run"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "let c = 3;\nwhile (c > 0) {\n  c--;\n}\nconsole.log(c);", a: "0" },
-          { t: "mc", q: "Which loop always runs its body at least once?",
-            choices: ["do...while", "while", "for", "if"], a: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 7 · Functions",
-    desc: "Reusable blocks of code",
-    color: "#7b61ff", colorDark: "#6248db", icon: "🛠️",
-    lessons: [
-      {
-        title: "Your First Function",
-        exercises: [
-          { t: "mc", q: "Which keyword declares a function?",
-            choices: ["function", "func", "def", "method"], a: 0 },
-          { t: "order", q: "Build the code: declare an empty function called greet",
-            tokens: ["function", "greet", "(", ")", "{", "}"] },
-          { t: "mc", q: "How do you CALL the function greet?",
-            choices: ["greet();", "call greet;", "greet.run", "function greet"], a: 0 },
-          { t: "fill", q: "Fill in the keyword", code: '___ sayHi() {\n  console.log("Hi");\n}',
-            choices: ["function", "method", "fun"], a: 0 },
-          { t: "mc", q: "What is the output?", code: 'function wave() {\n  console.log("👋");\n}\nwave();\nwave();',
-            choices: ["👋 👋", "👋", "wave wave", "Nothing"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: 'function boo() {\n  console.log("Boo!");\n}\nboo();', a: "Boo!" },
-        ],
-      },
-      {
-        title: "Parameters & Return",
-        exercises: [
-          { t: "mc", q: "Values you pass into a function are called…",
-            choices: ["arguments", "ingredients", "imports", "options"], a: 0 },
-          { t: "mc", q: "What does the return keyword do?",
-            choices: ["Sends a value back and ends the function", "Prints a value", "Restarts the function", "Deletes the function"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "function double(n) {\n  return n * 2;\n}\nconsole.log(double(5));", a: "10" },
-          { t: "fill", q: "Send the sum back to the caller", code: "function add(a, b) {\n  ___ a + b;\n}",
-            choices: ["return", "give", "console.log"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "function add(a, b) {\n  return a + b;\n}\nconsole.log(add(2, 3));",
-            choices: ["5", "23", "a + b", "undefined"], a: 0 },
-          { t: "order", q: "Build the code: return a times b",
-            tokens: ["return", "a", "*", "b", ";"] },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Unit 8 · Arrays",
-    desc: "Lists of anything",
-    color: "#f7567c", colorDark: "#d93f64", icon: "📚",
-    lessons: [
-      {
-        title: "Lists of Things",
-        exercises: [
-          { t: "mc", q: "Which brackets create an array?",
-            choices: ["[ ]", "{ }", "( )", "< >"], a: 0 },
-          { t: "mc", q: "Array positions (indexes) start counting at…",
-            choices: ["0", "1", "-1", "Wherever you like"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: 'let letters = ["a", "b", "c"];\nconsole.log(letters[1]);', a: "b" },
-          { t: "fill", q: "How many items? Fill in the property", code: 'let colors = ["red", "blue"];\nconsole.log(colors.___);',
-            choices: ["length", "size", "count"], a: 0 },
-          { t: "mc", q: "What is the output?", code: "console.log([1, 2, 3].length);",
-            choices: ["3", "2", "123", "[1, 2, 3]"], a: 0 },
-          { t: "order", q: "Build the code: an array of the numbers 1, 2, 3 called nums",
-            tokens: ["let", "nums", "=", "[", "1, 2, 3", "]", ";"] },
-        ],
-      },
-      {
-        title: "Array Methods",
-        exercises: [
-          { t: "mc", q: "Which method adds an item to the END of an array?",
-            choices: ["push", "pop", "add", "append"], a: 0 },
-          { t: "mc", q: "Which method removes the LAST item of an array?",
-            choices: ["pop", "push", "shift", "cut"], a: 0 },
-          { t: "type", q: "Type the output of this code", code: "let a = [1, 2];\na.push(3);\nconsole.log(a.length);", a: "3" },
-          { t: "fill", q: "Add \"apple\" to the end of the list", code: 'fruits.___("apple");',
-            choices: ["push", "pop", "plus"], a: 0 },
-          { t: "mc", q: "After this code runs, what is nums?", code: "let nums = [1, 2, 3];\nnums.pop();",
-            choices: ["[1, 2]", "[2, 3]", "[1, 2, 3]", "[]"], a: 0 },
-          { t: "mc", q: "What does fruits.includes(\"kiwi\") tell you?",
-            choices: ["Whether \"kiwi\" is in the array (true/false)", "Where \"kiwi\" is", "How many kiwis there are", "It adds a kiwi"], a: 0 },
-        ],
-      },
-    ],
-  },
-];
-
 /* ===================== State ===================== */
-const STORAGE_KEY = "kodexa-v1";
+const STORAGE_KEY = "kodexa-v2";
+const PROFILE_KEY = "kodexa-profile";
 const MAX_HEARTS = 5;
 const XP_PER_CORRECT = 2;
 const XP_LESSON_BONUS = 10;
 const XP_PERFECT_BONUS = 5;
 
 let state = loadState();
+let profile = loadProfile();
+let activeCourse = null;
 
 function loadState() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { /* fresh start */ }
+  const s = { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {}, ...(raw || {}) };
+  // migrate v1 progress (JS-only course, keys like "0-1")
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (raw && typeof raw === "object") {
-      return { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {}, ...raw };
+    const v1 = JSON.parse(localStorage.getItem("kodexa-v1"));
+    if (v1 && !raw) {
+      s.xp = v1.xp || 0; s.gems = v1.gems || 0; s.streak = v1.streak || 0; s.lastDay = v1.lastDay || null;
+      for (const k of Object.keys(v1.completed || {})) s.completed["js:" + k] = true;
+      for (const k of Object.keys(v1.chests || {})) s.chests["js:" + k] = true;
+      localStorage.removeItem("kodexa-v1");
     }
-  } catch (e) { /* corrupted storage — start fresh */ }
-  return { xp: 0, gems: 0, streak: 0, lastDay: null, completed: {}, chests: {} };
+  } catch (e) { /* ignore */ }
+  return s;
 }
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch (e) { return null; }
 }
+function saveProfile(p) { profile = p; localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
+function todayStr() { return new Date().toISOString().slice(0, 10); }
 function bumpStreak() {
   const today = todayStr();
   if (state.lastDay === today) return;
@@ -362,224 +49,285 @@ function bumpStreak() {
   state.lastDay = today;
 }
 
-/* Linear unlocking: lesson n is unlocked once lessons 0..n-1 are complete. */
-function lessonKey(u, l) { return `${u}-${l}`; }
+const lessonKey = (cid, u, l) => `${cid}:${u}-${l}`;
+const courseById = (id) => COURSES.find((c) => c.id === id);
 
-function flatLessons() {
-  const out = [];
-  UNITS.forEach((unit, u) => unit.lessons.forEach((_, l) => out.push(lessonKey(u, l))));
-  return out;
+function courseLessonCount(course) {
+  return course.units.reduce((n, u) => n + u.lessons.length, 0);
 }
-
-function firstIncompleteIndex() {
-  const all = flatLessons();
-  for (let i = 0; i < all.length; i++) if (!state.completed[all[i]]) return i;
-  return all.length;
+function courseDoneCount(course) {
+  let n = 0;
+  course.units.forEach((u, ui) => u.lessons.forEach((_, li) => {
+    if (state.completed[lessonKey(course.id, ui, li)]) n++;
+  }));
+  return n;
+}
+function firstIncompleteIndex(course) {
+  let i = 0;
+  for (let u = 0; u < course.units.length; u++)
+    for (let l = 0; l < course.units[u].lessons.length; l++) {
+      if (!state.completed[lessonKey(course.id, u, l)]) return i;
+      i++;
+    }
+  return i;
 }
 
 /* ===================== DOM helpers ===================== */
 const $ = (id) => document.getElementById(id);
-const homeScreen = $("homeScreen");
-const lessonScreen = $("lessonScreen");
-const resultScreen = $("resultScreen");
+const SCREENS = ["authScreen", "homeScreen", "courseScreen", "lessonScreen", "resultScreen", "practiceScreen"];
 
-function show(screen) {
-  [homeScreen, lessonScreen, resultScreen].forEach((s) => s.classList.add("hidden"));
-  screen.classList.remove("hidden");
-  window.scrollTo(0, 0);
-}
-
-function renderHeader() {
-  $("statStreak").textContent = state.streak;
-  $("statGems").textContent = state.gems;
-  $("statXp").textContent = state.xp;
+function show(id) {
+  SCREENS.forEach((s) => $(s).classList.toggle("hidden", s !== id));
+  const el = $(id);
+  el.classList.remove("screen-anim");
+  void el.offsetWidth; // restart the entrance animation
+  el.classList.add("screen-anim");
+  const inApp = id !== "authScreen";
+  $("topbar").classList.toggle("hidden", !inApp || id === "lessonScreen" || id === "practiceScreen");
+  $("bottomnav").classList.toggle("hidden", !inApp || id === "lessonScreen" || id === "resultScreen");
+  $("navLearn").classList.toggle("active", id === "homeScreen" || id === "courseScreen");
+  $("navPractice").classList.toggle("active", id === "practiceScreen");
+  if (id !== "practiceScreen") window.scrollTo(0, 0);
 }
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/* ===================== Sounds ===================== */
+function renderHeader() {
+  $("statStreak").textContent = state.streak;
+  $("statGems").textContent = state.gems;
+  $("statXp").textContent = state.xp;
+  $("avatarBtn").textContent = profile ? (profile.name[0] || "?").toUpperCase() : "?";
+}
+
+/* ===================== Sounds (WebAudio synth) ===================== */
 let audioCtx = null;
-function playTone(freqs, duration = 0.12) {
+function note(freq, at, dur, type = "triangle", vol = 0.13) {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    freqs.forEach((f, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = f;
-      const t = audioCtx.currentTime + i * duration;
-      gain.gain.setValueAtTime(0.18, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t);
-      osc.stop(t + duration);
-    });
+    const t = audioCtx.currentTime + at;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
   } catch (e) { /* sound is best-effort */ }
 }
-const dingGood = () => playTone([660, 880]);
-const dingBad = () => playTone([220, 165], 0.18);
+function playTone(freqs, duration = 0.12) { freqs.forEach((f, i) => note(f, i * duration, duration + 0.05)); }
+const sfx = {
+  tap: () => note(700, 0, 0.05, "square", 0.035),
+  select: () => note(950, 0, 0.06, "square", 0.045),
+  correct: () => { note(587.33, 0, 0.12); note(880, 0.09, 0.22); note(1108.73, 0.09, 0.22, "sine", 0.06); },
+  wrong: () => { note(196, 0, 0.2, "sawtooth", 0.05); note(147, 0.16, 0.28, "sawtooth", 0.05); },
+  sparkle: () => [784, 988, 1175, 1568].forEach((f, i) => note(f, i * 0.07, 0.14, "triangle", 0.1)),
+  fanfare: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(f, i * 0.13, 0.26)),
+  combo: () => [600, 800, 1050].forEach((f, i) => note(f, i * 0.06, 0.1, "triangle", 0.1)),
+};
+const dingGood = sfx.correct;
+const dingBad = sfx.wrong;
 
-/* ===================== Home / path ===================== */
+/* ===================== Juice helpers ===================== */
+function floatAt(target, text, gem = false) {
+  const r = target.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "xp-float" + (gem ? " gem" : "");
+  el.textContent = text;
+  el.style.left = r.left + r.width / 2 - 24 + (Math.random() * 36 - 18) + "px";
+  el.style.top = r.top - 6 + "px";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+function bumpStat(id) {
+  const el = $(id).closest(".stat");
+  if (!el) return;
+  el.classList.remove("bump");
+  void el.offsetWidth;
+  el.classList.add("bump");
+}
 
-/* Kodee, the Kodexa mascot — a cheeky cartoon code-blob. */
+/* ===================== Mascot ===================== */
 function mascotSVG(color) {
   return `
   <svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <line x1="60" y1="22" x2="60" y2="8" stroke="${color}" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="60" cy="7" r="6" fill="#ffc800"/>
+    <circle cx="60" cy="7" r="6" fill="#fbbf24"/>
     <path d="M60 22 C 25 22 16 50 16 76 C 16 104 36 118 60 118 C 84 118 104 104 104 76 C 104 50 95 22 60 22 Z" fill="${color}"/>
     <ellipse cx="60" cy="92" rx="26" ry="17" fill="rgba(255,255,255,0.28)"/>
     <circle cx="44" cy="62" r="13" fill="#fff"/>
     <circle cx="76" cy="62" r="13" fill="#fff"/>
-    <circle cx="47" cy="64" r="6" fill="#131f24"/>
-    <circle cx="73" cy="64" r="6" fill="#131f24"/>
+    <circle cx="47" cy="64" r="6" fill="#0c101e"/>
+    <circle cx="73" cy="64" r="6" fill="#0c101e"/>
     <circle cx="49" cy="61.5" r="2" fill="#fff"/>
     <circle cx="75" cy="61.5" r="2" fill="#fff"/>
-    <path d="M50 86 Q 60 95 70 86" stroke="#131f24" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <path d="M50 86 Q 60 95 70 86" stroke="#0c101e" stroke-width="4.5" fill="none" stroke-linecap="round"/>
     <text x="60" y="106" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="13" fill="rgba(0,0,0,0.45)">&lt;/&gt;</text>
     <ellipse cx="42" cy="122" rx="11" ry="6" fill="${color}"/>
     <ellipse cx="78" cy="122" rx="11" ry="6" fill="${color}"/>
   </svg>`;
 }
 
-/* Winding-path horizontal offset, Duolingo style: 0, 42, 60, 42, 0, -42, -60… */
-function pathOffset(step) {
-  return Math.round(Math.sin((step * Math.PI) / 4) * 60);
+/* ===================== Auth ===================== */
+function initAuth() {
+  $("authLogo").innerHTML = mascotSVG("#7c5cff");
+  document.querySelectorAll("#authButtons [data-method]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const method = btn.dataset.method;
+      const name = prompt(`What should we call you? (${method} sign-in is simulated — everything stays on this device)`, "Coder");
+      if (name === null) return;
+      completeAuth({ name: name.trim() || "Coder", email: `${method.toLowerCase()}-user@device.local`, method });
+    });
+  });
+  $("emailBtn").addEventListener("click", () => {
+    $("authButtons").classList.add("hidden");
+    $("emailForm").classList.remove("hidden");
+    $("authName").focus();
+  });
+  $("emailBack").addEventListener("click", () => {
+    $("emailForm").classList.add("hidden");
+    $("authButtons").classList.remove("hidden");
+  });
+  $("emailForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    completeAuth({ name: $("authName").value.trim() || "Coder", email: $("authEmail").value.trim(), method: "Email" });
+  });
+  $("guestBtn").addEventListener("click", () => completeAuth({ name: "Guest", email: "", method: "Guest" }));
 }
 
-function renderHome() {
+function completeAuth(p) {
+  saveProfile({ ...p, joined: todayStr() });
+  playTone([523, 659, 784], 0.13);
+  enterApp();
+}
+
+function enterApp() {
   renderHeader();
-  const path = $("path");
-  path.innerHTML = "";
-  const currentIdx = firstIncompleteIndex();
-  let flatIdx = 0;
-  let step = 0;
+  renderHome();
+  show("homeScreen");
+}
 
-  UNITS.forEach((unit, u) => {
-    const unitDone = unit.lessons.every((_, l) => state.completed[lessonKey(u, l)]);
-    const doneCount = unit.lessons.filter((_, l) => state.completed[lessonKey(u, l)]).length;
-    const unitName = unit.title.split("·").pop().trim();
-
-    const banner = document.createElement("div");
-    banner.className = "unit-banner";
-    banner.style.background = unit.color;
-    banner.style.boxShadow = `0 4px 0 ${unit.colorDark}`;
-    banner.innerHTML = `
-      <div>
-        <div class="ub-label">Section 1, Unit ${u + 1}</div>
-        <h2>${escapeHtml(unitName)}</h2>
+/* ===================== Home: course catalog ===================== */
+function renderHome() {
+  $("greeting").innerHTML = profile && profile.name !== "Guest"
+    ? `Hey ${escapeHtml(profile.name)} 👋<br>What are we mastering today?`
+    : "Pick a language.<br>Master it.";
+  const grid = $("courseGrid");
+  grid.innerHTML = "";
+  COURSES.forEach((course, i) => {
+    const total = courseLessonCount(course);
+    const done = courseDoneCount(course);
+    const pct = Math.round((done / total) * 100);
+    const card = document.createElement("button");
+    card.className = "course-card";
+    card.style.setProperty("--cc", course.color);
+    card.style.animationDelay = Math.min(i * 30, 450) + "ms";
+    card.innerHTML = `
+      <div class="cc-top">
+        <div class="cc-badge">${escapeHtml(course.badge)}</div>
+        <div>
+          <div class="cc-name">${escapeHtml(course.name)}</div>
+          <div class="cc-tag">${escapeHtml(course.tagline)}</div>
+        </div>
       </div>
-      <div class="ub-book" title="${escapeHtml(unit.desc)}">📖</div>`;
-    path.appendChild(banner);
+      <div class="cc-bar"><i style="width:${pct}%"></i></div>
+      <div class="cc-meta">
+        <span>${course.units.length} units · ${total} lessons</span>
+        <span class="cc-diff">${pct > 0 ? pct + "%" : escapeHtml(course.difficulty)}</span>
+      </div>`;
+    card.addEventListener("click", () => openCourse(course.id));
+    grid.appendChild(card);
+  });
+}
 
-    const pathEl = document.createElement("div");
-    pathEl.className = "unit-path";
+/* ===================== Course page ===================== */
+function openCourse(id) {
+  activeCourse = courseById(id);
+  renderCourse();
+  show("courseScreen");
+}
 
-    unit.lessons.forEach((lesson, l) => {
-      const key = lessonKey(u, l);
-      const done = !!state.completed[key];
-      const isCurrent = flatIdx === currentIdx;
-      const locked = !done && !isCurrent;
+function renderCourse() {
+  const c = activeCourse;
+  const total = courseLessonCount(c);
+  const done = courseDoneCount(c);
+  $("courseHeader").innerHTML = `
+    <div class="course-head" style="--cc:${c.color}">
+      <div class="cc-badge">${escapeHtml(c.badge)}</div>
+      <div>
+        <h2>${escapeHtml(c.name)}</h2>
+        <div class="cc-tag">${escapeHtml(c.tagline)} · ${escapeHtml(c.difficulty)}</div>
+      </div>
+      <div class="head-progress"><b>${Math.round((done / total) * 100)}%</b>${done}/${total} lessons</div>
+    </div>`;
 
-      const wrap = document.createElement("div");
-      wrap.className = "node-wrap" + (isCurrent ? " active" : "");
-      wrap.style.transform = `translateX(${pathOffset(step)}px)`;
+  const list = $("unitList");
+  list.innerHTML = "";
+  const currentIdx = firstIncompleteIndex(c);
+  let flat = 0;
 
-      const btn = document.createElement("button");
-      btn.className = "node" + (done ? " done" : locked ? " locked" : "");
-      btn.style.setProperty("--node-c", unit.color);
-      btn.style.setProperty("--node-cd", unit.colorDark);
-      btn.disabled = locked;
-      btn.innerHTML = `<span class="star">${done ? "✓" : "★"}</span>`;
-      btn.title = lesson.title;
-      btn.addEventListener("click", () => startLesson(u, l));
+  c.units.forEach((unit, ui) => {
+    const unitDone = unit.lessons.every((_, li) => state.completed[lessonKey(c.id, ui, li)]);
+    const chestKey = `${c.id}:${ui}`;
+    const claimed = !!state.chests[chestKey];
 
-      if (isCurrent) {
-        const tip = document.createElement("div");
-        tip.className = "start-tip";
-        tip.style.setProperty("--node-c", unit.color);
-        tip.textContent = "START";
-        wrap.appendChild(tip);
+    const card = document.createElement("div");
+    card.className = "unit-card";
+    card.style.setProperty("--cc", c.color);
+    card.style.animationDelay = Math.min(ui * 40, 400) + "ms";
 
-        const ring = document.createElement("div");
-        ring.className = "ring";
-        ring.style.setProperty("--node-c", unit.color);
-        ring.style.setProperty("--ring-pct", `${Math.max(8, (doneCount / unit.lessons.length) * 100)}%`);
-        ring.appendChild(btn);
-        wrap.appendChild(ring);
-      } else {
-        wrap.appendChild(btn);
-      }
-
-      const label = document.createElement("div");
-      label.className = "node-label";
-      label.textContent = lesson.title;
-      wrap.appendChild(label);
-      pathEl.appendChild(wrap);
-      flatIdx++;
-      step++;
-    });
-
-    // Treasure chest reward at the end of each unit
-    const claimed = !!state.chests[u];
-    const chestWrap = document.createElement("div");
-    chestWrap.className = "node-wrap";
-    chestWrap.style.transform = `translateX(${pathOffset(step)}px)`;
+    const head = document.createElement("div");
+    head.className = "unit-head";
+    head.innerHTML = `<div><h3>${escapeHtml(unit.title)}</h3><p>${escapeHtml(unit.desc)}</p></div>`;
     const chest = document.createElement("button");
-    chest.className = "chest" + (unitDone ? (claimed ? " claimed" : " claimable") : "");
-    chest.textContent = "🎁";
-    chest.title = claimed ? "Already claimed" : unitDone ? "Claim your gems!" : "Finish the unit to unlock";
+    chest.className = "chest-btn" + (unitDone && !claimed ? " claimable" : "");
+    chest.textContent = unitDone && claimed ? "✅" : "🎁";
+    chest.title = claimed ? "Chest claimed" : unitDone ? "Claim 20 gems!" : "Finish the unit to unlock the chest";
     chest.disabled = !unitDone || claimed;
     if (unitDone && !claimed) {
       chest.addEventListener("click", () => {
         state.gems += 20;
-        state.chests[u] = true;
+        state.chests[chestKey] = true;
         saveState();
-        playTone([523, 659, 784], 0.13);
-        renderHome();
+        sfx.sparkle();
+        floatAt(chest, "+20 💎", true);
+        renderHeader();
+        bumpStat("statGems");
+        renderCourse();
       });
-      const pill = document.createElement("div");
-      pill.className = "claim-pill";
-      pill.textContent = "CLAIM 💎 20";
-      chestWrap.append(chest, pill);
-    } else {
-      chestWrap.appendChild(chest);
     }
-    pathEl.appendChild(chestWrap);
-    step++;
+    head.appendChild(chest);
+    card.appendChild(head);
 
-    // Mascot hanging out beside the path, greyed out until the unit is beaten
-    const mascot = document.createElement("div");
-    mascot.className = "mascot " + (u % 2 ? "left" : "right") + (unitDone ? "" : " dim");
-    mascot.style.top = "30%";
-    mascot.innerHTML = mascotSVG(unit.color) + `<div class="mstars">${unitDone ? "⭐⭐⭐" : "★ ★ ★"}</div>`;
-    pathEl.appendChild(mascot);
+    unit.lessons.forEach((lesson, li) => {
+      const done = !!state.completed[lessonKey(c.id, ui, li)];
+      const isCurrent = flat === currentIdx;
+      const locked = !done && !isCurrent;
+      const row = document.createElement("button");
+      row.className = "lesson-row" + (done ? " done" : isCurrent ? " current" : "");
+      row.disabled = locked;
+      row.innerHTML = `
+        <span class="lr-icon">${done ? "✓" : locked ? "🔒" : "▶"}</span>
+        <span class="lr-title">${escapeHtml(lesson.title)}</span>
+        <span class="lr-count">${lesson.exercises.length} exercises</span>
+        ${isCurrent ? '<span class="lr-start">START</span>' : ""}`;
+      row.addEventListener("click", () => startLesson(c.id, ui, li));
+      card.appendChild(row);
+      flat++;
+    });
 
-    // Grand trophy at the very end of the course
-    if (u === UNITS.length - 1) {
-      const allDone = flatLessons().every((k) => state.completed[k]);
-      const tWrap = document.createElement("div");
-      tWrap.className = "node-wrap";
-      tWrap.style.transform = `translateX(${pathOffset(step)}px)`;
-      const trophy = document.createElement("div");
-      trophy.className = "trophy-node" + (allDone ? " won" : "");
-      trophy.textContent = "🏆";
-      trophy.title = allDone ? "JavaScript basics: conquered!" : "Finish every lesson to win the trophy";
-      const tLabel = document.createElement("div");
-      tLabel.className = "node-label";
-      tLabel.textContent = allDone ? "You did it!" : "Course trophy";
-      tWrap.append(trophy, tLabel);
-      pathEl.appendChild(tWrap);
-    }
-
-    path.appendChild(pathEl);
+    list.appendChild(card);
   });
 }
 
+$("courseBack").addEventListener("click", () => { renderHome(); renderHeader(); show("homeScreen"); });
+
 /* ===================== Lesson engine ===================== */
-let lesson = null; // active lesson session
+let lesson = null;
 
 function shuffle(arr) {
   const a = arr.slice();
@@ -590,19 +338,21 @@ function shuffle(arr) {
   return a;
 }
 
-function startLesson(u, l) {
-  const data = UNITS[u].lessons[l];
+function startLesson(cid, u, l) {
+  const course = courseById(cid);
+  activeCourse = course;
+  const data = course.units[u].lessons[l];
   lesson = {
-    u, l,
+    cid, u, l,
     queue: shuffle(data.exercises),
     total: data.exercises.length,
     correct: 0,
     mistakes: 0,
     hearts: MAX_HEARTS,
     checked: false,
-    getAnswer: null, // set by each renderer; returns {ok, correctText}
+    getAnswer: null,
   };
-  show(lessonScreen);
+  show("lessonScreen");
   renderLessonChrome();
   nextExercise();
 }
@@ -622,26 +372,25 @@ function nextExercise() {
   btn.textContent = "CHECK";
   btn.className = "big-btn";
   btn.disabled = true;
-  renderExercise(lesson.queue[0]);
+  renderExercise(lesson.queue[0], $("exerciseArea"), (fn) => { lesson.getAnswer = fn; }, () => setCheckEnabled(true), () => setCheckEnabled(false));
 }
 
 function setCheckEnabled(on) {
   if (!lesson.checked) $("checkBtn").disabled = !on;
 }
 
-function renderExercise(ex) {
-  const area = $("exerciseArea");
+/* Shared exercise renderer.
+ * setAnswer(fn) registers the grader; onReady/onNotReady toggle the check button. */
+function renderExercise(ex, area, setAnswer, onReady, onNotReady) {
   area.innerHTML = "";
-
   const q = document.createElement("div");
   q.className = "exercise-q";
   q.textContent = ex.q;
   area.appendChild(q);
-
-  if (ex.t === "mc") renderMC(area, ex);
-  else if (ex.t === "fill") renderFill(area, ex);
-  else if (ex.t === "order") renderOrder(area, ex);
-  else if (ex.t === "type") renderType(area, ex);
+  if (ex.t === "mc") renderMC(ex, area, setAnswer, onReady);
+  else if (ex.t === "fill") renderFill(ex, area, setAnswer, onReady, onNotReady);
+  else if (ex.t === "order") renderOrder(ex, area, setAnswer, onReady, onNotReady);
+  else if (ex.t === "type") renderType(ex, area, setAnswer, onReady, onNotReady);
 }
 
 function addCode(area, code) {
@@ -653,43 +402,44 @@ function addCode(area, code) {
   return pre;
 }
 
-/* --- multiple choice --- */
-function renderMC(area, ex) {
+function renderMC(ex, area, setAnswer, onReady) {
   addCode(area, ex.code);
   const list = document.createElement("div");
   list.className = "choices";
   let selected = -1;
-  const order = shuffle(ex.choices.map((_, i) => i));
-  const buttons = order.map((origIdx) => {
+  const orderIdx = shuffle(ex.choices.map((_, i) => i));
+  let graded = false;
+  const buttons = orderIdx.map((origIdx) => {
     const b = document.createElement("button");
     b.className = "choice";
     b.innerHTML = `<code>${escapeHtml(ex.choices[origIdx])}</code>`;
     b.addEventListener("click", () => {
-      if (lesson.checked) return;
+      if (graded) return;
       selected = origIdx;
       buttons.forEach((x) => x.classList.remove("selected"));
       b.classList.add("selected");
-      setCheckEnabled(true);
+      sfx.select();
+      onReady();
     });
     list.appendChild(b);
     return b;
   });
   area.appendChild(list);
 
-  lesson.getAnswer = () => {
+  setAnswer(() => {
+    graded = true;
     const ok = selected === ex.a;
     buttons.forEach((b, i) => {
       b.disabled = true;
-      if (order[i] === ex.a) b.classList.add("correct");
-      else if (order[i] === selected && !ok) b.classList.add("wrong");
+      if (orderIdx[i] === ex.a) b.classList.add("correct");
+      else if (orderIdx[i] === selected && !ok) b.classList.add("wrong");
     });
     return { ok, correctText: ex.choices[ex.a] };
-  };
+  });
 }
 
-/* --- fill in the blank with chips --- */
-function renderFill(area, ex) {
-  const pre = addCode(area, "");
+function renderFill(ex, area, setAnswer, onReady, onNotReady) {
+  const pre = addCode(area, " ");
   const parts = ex.code.split("___");
   const blank = document.createElement("span");
   blank.className = "blank";
@@ -700,87 +450,97 @@ function renderFill(area, ex) {
   const bank = document.createElement("div");
   bank.className = "chips";
   let selected = -1;
-  const order = shuffle(ex.choices.map((_, i) => i));
-  const chips = order.map((origIdx) => {
-    const c = document.createElement("button");
-    c.className = "chip";
-    c.textContent = ex.choices[origIdx];
-    c.addEventListener("click", () => {
-      if (lesson.checked) return;
+  let graded = false;
+  const orderIdx = shuffle(ex.choices.map((_, i) => i));
+  const chips = orderIdx.map((origIdx) => {
+    const cBtn = document.createElement("button");
+    cBtn.className = "chip";
+    cBtn.textContent = ex.choices[origIdx];
+    cBtn.addEventListener("click", () => {
+      if (graded) return;
+      sfx.tap();
       selected = selected === origIdx ? -1 : origIdx;
       chips.forEach((x) => x.classList.remove("selected"));
       if (selected !== -1) {
-        c.classList.add("selected");
+        cBtn.classList.add("selected");
         blank.textContent = ex.choices[origIdx];
         blank.classList.add("filled");
+        onReady();
       } else {
         blank.textContent = " ";
         blank.classList.remove("filled");
+        onNotReady();
       }
-      setCheckEnabled(selected !== -1);
     });
-    bank.appendChild(c);
-    return c;
+    bank.appendChild(cBtn);
+    return cBtn;
   });
   area.appendChild(bank);
 
-  lesson.getAnswer = () => ({ ok: selected === ex.a, correctText: ex.choices[ex.a] });
+  setAnswer(() => {
+    graded = true;
+    return { ok: selected === ex.a, correctText: ex.choices[ex.a] };
+  });
 }
 
-/* --- arrange tokens into code --- */
-function renderOrder(area, ex) {
+function renderOrder(ex, area, setAnswer, onReady, onNotReady) {
   const line = document.createElement("div");
   line.className = "order-line";
   area.appendChild(line);
-
   const bank = document.createElement("div");
   bank.className = "chips";
   area.appendChild(bank);
 
-  const placed = []; // indexes into ex.tokens, in placed order
-  const order = shuffle(ex.tokens.map((_, i) => i));
+  const placed = [];
+  let graded = false;
+  const orderIdx = shuffle(ex.tokens.map((_, i) => i));
+  const bankChips = [];
 
   function redrawLine() {
     line.innerHTML = "";
     placed.forEach((tokenIdx, pos) => {
-      const c = document.createElement("button");
-      c.className = "chip";
-      c.textContent = ex.tokens[tokenIdx];
-      c.addEventListener("click", () => {
-        if (lesson.checked) return;
+      const cBtn = document.createElement("button");
+      cBtn.className = "chip";
+      cBtn.textContent = ex.tokens[tokenIdx];
+      cBtn.addEventListener("click", () => {
+        if (graded) return;
         placed.splice(pos, 1);
         bankChips[tokenIdx].classList.remove("used");
         redrawLine();
       });
-      line.appendChild(c);
+      line.appendChild(cBtn);
     });
-    setCheckEnabled(placed.length === ex.tokens.length);
+    if (placed.length === ex.tokens.length) onReady(); else onNotReady();
   }
 
-  const bankChips = [];
-  order.forEach((tokenIdx) => {
-    const c = document.createElement("button");
-    c.className = "chip";
-    c.textContent = ex.tokens[tokenIdx];
-    c.addEventListener("click", () => {
-      if (lesson.checked || c.classList.contains("used")) return;
-      c.classList.add("used");
+  orderIdx.forEach((tokenIdx) => {
+    const cBtn = document.createElement("button");
+    cBtn.className = "chip";
+    cBtn.textContent = ex.tokens[tokenIdx];
+    cBtn.addEventListener("click", () => {
+      if (graded || cBtn.classList.contains("used")) return;
+      sfx.tap();
+      cBtn.classList.add("used");
       placed.push(tokenIdx);
       redrawLine();
     });
-    bankChips[tokenIdx] = c;
-    bank.appendChild(c);
+    bankChips[tokenIdx] = cBtn;
+    bank.appendChild(cBtn);
   });
   redrawLine();
 
-  lesson.getAnswer = () => ({
-    ok: placed.length === ex.tokens.length && placed.every((tokenIdx, pos) => ex.tokens[tokenIdx] === ex.tokens[pos]),
-    correctText: ex.tokens.join(" "),
+  setAnswer(() => {
+    graded = true;
+    return {
+      ok: placed.length === ex.tokens.length && placed.every((tokenIdx, pos) => ex.tokens[tokenIdx] === ex.tokens[pos]),
+      correctText: ex.tokens.join(" "),
+    };
   });
 }
 
-/* --- type the answer --- */
-function renderType(area, ex) {
+const normalizeTyped = (s) => s.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/;$/, "");
+
+function renderType(ex, area, setAnswer, onReady, onNotReady) {
   addCode(area, ex.code);
   const input = document.createElement("input");
   input.className = "type-input";
@@ -788,28 +548,23 @@ function renderType(area, ex) {
   input.autocapitalize = "off";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.addEventListener("input", () => setCheckEnabled(input.value.trim() !== ""));
+  input.addEventListener("input", () => (input.value.trim() ? onReady() : onNotReady()));
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !$("checkBtn").disabled) $("checkBtn").click();
+    if (e.key === "Enter" && !$("checkBtn").disabled && !$("lessonScreen").classList.contains("hidden")) $("checkBtn").click();
   });
   area.appendChild(input);
-  setTimeout(() => input.focus(), 50);
+  setTimeout(() => input.focus(), 60);
 
-  const normalize = (s) => s.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/;$/, "");
-  lesson.getAnswer = () => {
-    const accepted = [ex.a, ...(ex.alt || [])].map(normalize);
-    return { ok: accepted.includes(normalize(input.value)), correctText: ex.a };
-  };
+  setAnswer(() => {
+    const accepted = [ex.a, ...(ex.alt || [])].map(normalizeTyped);
+    return { ok: accepted.includes(normalizeTyped(input.value)), correctText: ex.a };
+  });
 }
 
 /* --- check / continue flow --- */
 $("checkBtn").addEventListener("click", () => {
   if (!lesson) return;
-
-  if (lesson.checked) { // CONTINUE pressed
-    nextExercise();
-    return;
-  }
+  if (lesson.checked) { nextExercise(); return; }
 
   const { ok, correctText } = lesson.getAnswer();
   lesson.checked = true;
@@ -827,16 +582,21 @@ $("checkBtn").addEventListener("click", () => {
     fb.className = "feedback good";
     $("feedbackTitle").textContent = ["Nice!", "Correct!", "Great job!", "Nailed it!"][Math.floor(Math.random() * 4)];
     $("feedbackDetail").textContent = "+" + XP_PER_CORRECT + " XP";
-    btn.className = "big-btn";
+    btn.className = "big-btn good";
+    floatAt(btn, `+${XP_PER_CORRECT} XP`);
     dingGood();
   } else {
     lesson.mistakes++;
     lesson.hearts--;
-    lesson.queue.push(ex); // Duolingo-style: missed questions come back
+    lesson.queue.push(ex); // missed questions come back later in the lesson
     fb.className = "feedback bad";
     $("feedbackTitle").textContent = "Not quite…";
     $("feedbackDetail").innerHTML = `Correct answer: <code>${escapeHtml(correctText)}</code>`;
     btn.className = "big-btn bad";
+    const hearts = document.querySelector(".lesson-hearts");
+    hearts.classList.remove("lost");
+    void hearts.offsetWidth;
+    hearts.classList.add("lost");
     dingBad();
   }
   renderLessonChrome();
@@ -845,61 +605,61 @@ $("checkBtn").addEventListener("click", () => {
 $("quitBtn").addEventListener("click", () => {
   if (confirm("Quit this lesson? Your progress in it will be lost.")) {
     lesson = null;
-    renderHome();
-    show(homeScreen);
+    renderCourse();
+    renderHeader();
+    show("courseScreen");
   }
 });
 
 /* ===================== Lesson end ===================== */
 function endLesson(passed) {
   const card = $("resultCard");
+  const c = activeCourse;
   if (passed) {
     const perfect = lesson.mistakes === 0;
-    let earned = XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0);
-    const key = lessonKey(lesson.u, lesson.l);
-    state.completed[key] = true;
-    state.xp += earned;
+    state.completed[lessonKey(lesson.cid, lesson.u, lesson.l)] = true;
+    state.xp += XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0);
     bumpStreak();
     saveState();
-    // XP_PER_CORRECT was already added per answer; show the full lesson total
-    earned += lesson.total * XP_PER_CORRECT;
+    const earned = XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0) + lesson.total * XP_PER_CORRECT;
     const accuracy = Math.round((lesson.total / (lesson.total + lesson.mistakes)) * 100);
 
     card.innerHTML = `
-      <div class="result-mascot">${mascotSVG(UNITS[lesson.u].color)}</div>
+      <div class="result-mascot">${mascotSVG(c.color)}</div>
       <h1>${perfect ? "Perfect lesson!" : "Lesson complete!"}</h1>
-      <p>${escapeHtml(UNITS[lesson.u].lessons[lesson.l].title)} · ${escapeHtml(UNITS[lesson.u].title)}</p>
+      <p>${escapeHtml(c.units[lesson.u].lessons[lesson.l].title)} · ${escapeHtml(c.name)}</p>
       <div class="result-stats">
         <div class="result-stat"><span class="label">TOTAL XP</span><span class="value">⚡ ${earned}</span></div>
-        <div class="result-stat green"><span class="label">ACCURACY</span><span class="value">🎯 ${accuracy}%</span></div>
-        <div class="result-stat blue"><span class="label">STREAK</span><span class="value">🔥 ${state.streak}</span></div>
+        <div class="result-stat"><span class="label">ACCURACY</span><span class="value">🎯 ${accuracy}%</span></div>
+        <div class="result-stat"><span class="label">STREAK</span><span class="value">🔥 ${state.streak}</span></div>
       </div>
       <button class="big-btn" id="resultContinue">CONTINUE</button>`;
     confetti();
-    playTone([523, 659, 784, 1047], 0.15);
+    sfx.fanfare();
   } else {
     card.innerHTML = `
       <div class="result-emoji">💔</div>
       <h1>Out of hearts!</h1>
       <p>No worries — mistakes are how you learn. Give it another go.</p>
       <button class="big-btn bad" id="resultRetry">TRY AGAIN</button>
-      <button class="big-btn blue" id="resultContinue">BACK TO LESSONS</button>`;
+      <button class="big-btn ghost" id="resultContinue">BACK TO COURSE</button>`;
   }
 
-  const { u, l } = lesson;
+  const { cid, u, l } = lesson;
   lesson = null;
-  show(resultScreen);
+  show("resultScreen");
   renderHeader();
   const retry = $("resultRetry");
-  if (retry) retry.addEventListener("click", () => startLesson(u, l));
+  if (retry) retry.addEventListener("click", () => startLesson(cid, u, l));
   $("resultContinue").addEventListener("click", () => {
-    renderHome();
-    show(homeScreen);
+    renderCourse();
+    renderHeader();
+    show("courseScreen");
   });
 }
 
 function confetti() {
-  const colors = ["#58cc02", "#1cb0f6", "#ce82ff", "#ff9600", "#ff4b4b", "#ffc800"];
+  const colors = ["#7c5cff", "#22d3ee", "#34d399", "#fbbf24", "#fb5e6c", "#f472b6"];
   for (let i = 0; i < 60; i++) {
     const piece = document.createElement("div");
     piece.className = "confetti";
@@ -913,22 +673,221 @@ function confetti() {
   }
 }
 
-/* ===================== Bottom nav ===================== */
-$("navHome").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+/* ===================== Practice feed (endless scroll) ===================== */
+let feedPool = [];
+let feedCorrect = 0;
+let feedCombo = 0;
+let feedObserver = null;
 
-$("navTrophy").addEventListener("click", () => {
-  const current = document.querySelector(".node-wrap.active");
-  if (current) current.scrollIntoView({ behavior: "smooth", block: "center" });
-});
+function buildFeedPool(filterId) {
+  feedPool = [];
+  COURSES.forEach((course) => {
+    if (filterId !== "all" && course.id !== filterId) return;
+    course.units.forEach((u) => u.lessons.forEach((l) => l.exercises.forEach((ex) => {
+      if (ex.t === "mc" || ex.t === "fill" || ex.t === "type") feedPool.push({ ex, course });
+    })));
+  });
+}
 
-$("navSettings").addEventListener("click", () => {
-  if (confirm("Reset ALL progress (XP, gems, streak and completed lessons)?")) {
-    localStorage.removeItem(STORAGE_KEY);
-    state = loadState();
-    renderHome();
-    window.scrollTo(0, 0);
+function initPracticeFilter() {
+  const sel = $("practiceFilter");
+  sel.innerHTML = '<option value="all">🌐 All languages</option>' +
+    COURSES.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+  sel.addEventListener("change", () => startFeed(sel.value));
+}
+
+function startFeed(filterId) {
+  buildFeedPool(filterId);
+  const feed = $("feed");
+  feed.innerHTML = "";
+  feedCorrect = 0;
+  feedCombo = 0;
+  renderFeedScore();
+  appendFeedCards(4);
+  feed.scrollTop = 0;
+}
+
+function renderFeedScore() {
+  $("feedCorrect").textContent = feedCorrect;
+  $("feedCombo").textContent = feedCombo;
+}
+
+function appendFeedCards(n) {
+  const feed = $("feed");
+  if (feedObserver) feedObserver.disconnect();
+  for (let i = 0; i < n; i++) {
+    const pick = feedPool[Math.floor(Math.random() * feedPool.length)];
+    if (!pick) return;
+    feed.appendChild(buildFeedCard(pick.ex, pick.course));
   }
+  // when the last card becomes visible, load more
+  const last = feed.lastElementChild;
+  if (last) {
+    feedObserver = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        feedObserver.disconnect();
+        appendFeedCards(4);
+      }
+    }, { root: feed, threshold: 0.4 });
+    feedObserver.observe(last);
+  }
+}
+
+function buildFeedCard(ex, course) {
+  const cardEl = document.createElement("section");
+  cardEl.className = "feed-card";
+  cardEl.style.setProperty("--cc", course.color);
+
+  const langChip = document.createElement("div");
+  langChip.className = "fc-lang";
+  langChip.textContent = `${course.badge} · ${course.name}`;
+  cardEl.appendChild(langChip);
+
+  const q = document.createElement("div");
+  q.className = "fc-q";
+  q.textContent = ex.q;
+  cardEl.appendChild(q);
+  if (ex.code && ex.t !== "fill") addCode(cardEl, ex.code);
+
+  const fbEl = document.createElement("div");
+  fbEl.className = "fc-feedback";
+
+  const grade = (ok, correctText) => {
+    fbEl.className = "fc-feedback " + (ok ? "good" : "bad");
+    fbEl.innerHTML = ok
+      ? `✅ Correct! +${XP_PER_CORRECT} XP`
+      : `❌ The answer was <code>${escapeHtml(correctText)}</code>`;
+    if (ok) {
+      feedCorrect++;
+      feedCombo++;
+      state.xp += XP_PER_CORRECT;
+      bumpStreak();
+      saveState();
+      floatAt(q, `+${XP_PER_CORRECT} XP`);
+      if (feedCombo > 0 && feedCombo % 5 === 0) { sfx.combo(); floatAt(q, `🔥 ${feedCombo} combo!`); }
+      else dingGood();
+    } else {
+      feedCombo = 0;
+      dingBad();
+    }
+    renderFeedScore();
+    const next = document.createElement("div");
+    next.className = "fc-next";
+    next.textContent = "scroll for the next one ⌄";
+    cardEl.appendChild(next);
+  };
+
+  if (ex.t === "mc" || ex.t === "fill") {
+    let codeEl = null;
+    let blank = null;
+    if (ex.t === "fill") {
+      codeEl = addCode(cardEl, " ");
+      const parts = ex.code.split("___");
+      blank = document.createElement("span");
+      blank.className = "blank";
+      blank.textContent = " ";
+      codeEl.textContent = "";
+      codeEl.append(document.createTextNode(parts[0]), blank, document.createTextNode(parts[1] ?? ""));
+    }
+    const list = document.createElement("div");
+    list.className = "choices";
+    let graded = false;
+    const orderIdx = shuffle(ex.choices.map((_, i) => i));
+    const buttons = orderIdx.map((origIdx) => {
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.innerHTML = `<code>${escapeHtml(ex.choices[origIdx])}</code>`;
+      b.addEventListener("click", () => {
+        if (graded) return;
+        graded = true;
+        const ok = origIdx === ex.a;
+        if (blank) { blank.textContent = ex.choices[origIdx]; blank.classList.add("filled"); }
+        buttons.forEach((x, i2) => {
+          x.disabled = true;
+          if (orderIdx[i2] === ex.a) x.classList.add("correct");
+          else if (orderIdx[i2] === origIdx && !ok) x.classList.add("wrong");
+        });
+        grade(ok, ex.choices[ex.a]);
+      });
+      list.appendChild(b);
+      return b;
+    });
+    cardEl.appendChild(list);
+  } else { // type
+    const input = document.createElement("input");
+    input.className = "type-input";
+    input.placeholder = "Type your answer…";
+    input.autocapitalize = "off";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    const check = document.createElement("button");
+    check.className = "big-btn fc-check";
+    check.textContent = "CHECK";
+    let graded = false;
+    const doCheck = () => {
+      if (graded || !input.value.trim()) return;
+      graded = true;
+      input.disabled = true;
+      check.disabled = true;
+      const accepted = [ex.a, ...(ex.alt || [])].map(normalizeTyped);
+      grade(accepted.includes(normalizeTyped(input.value)), ex.a);
+    };
+    check.addEventListener("click", doCheck);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") doCheck(); });
+    cardEl.append(input, check);
+  }
+
+  cardEl.appendChild(fbEl);
+  return cardEl;
+}
+
+/* ===================== Profile sheet ===================== */
+function openProfile() {
+  const lessonsDone = Object.keys(state.completed).length;
+  $("profileCard").innerHTML = `
+    <div class="avatar">${profile ? (profile.name[0] || "?").toUpperCase() : "?"}</div>
+    <h2>${escapeHtml(profile ? profile.name : "Guest")}</h2>
+    <div class="email">${escapeHtml(profile && profile.email ? profile.email : `Signed in with ${profile ? profile.method : "—"}`)}</div>
+    <div class="sheet-stats">
+      <span><b>${state.xp}</b>XP</span>
+      <span><b>${state.streak}</b>day streak</span>
+      <span><b>${state.gems}</b>gems</span>
+      <span><b>${lessonsDone}</b>lessons</span>
+    </div>
+    <button class="big-btn ghost" id="sheetClose">Close</button>
+    <button class="big-btn ghost" id="sheetSignout">Sign out</button>
+    <button class="big-btn bad" id="sheetReset">Reset all progress</button>`;
+  $("profileSheet").classList.remove("hidden");
+  $("sheetClose").addEventListener("click", closeProfile);
+  $("sheetSignout").addEventListener("click", () => {
+    localStorage.removeItem(PROFILE_KEY);
+    profile = null;
+    closeProfile();
+    show("authScreen");
+  });
+  $("sheetReset").addEventListener("click", () => {
+    if (confirm("Reset ALL progress (XP, gems, streak and completed lessons)?")) {
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      closeProfile();
+      enterApp();
+    }
+  });
+}
+function closeProfile() { $("profileSheet").classList.add("hidden"); }
+$("profileSheet").addEventListener("click", (e) => { if (e.target === $("profileSheet")) closeProfile(); });
+
+/* ===================== Nav ===================== */
+$("navLearn").addEventListener("click", () => { renderHome(); renderHeader(); show("homeScreen"); });
+$("navPractice").addEventListener("click", () => {
+  show("practiceScreen");
+  if (!$("feed").children.length) startFeed($("practiceFilter").value);
 });
+$("navProfile").addEventListener("click", openProfile);
+$("avatarBtn").addEventListener("click", openProfile);
 
 /* ===================== Boot ===================== */
-renderHome();
+initAuth();
+initPracticeFilter();
+if (profile) enterApp();
+else show("authScreen");
