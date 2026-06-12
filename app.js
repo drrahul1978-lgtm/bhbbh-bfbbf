@@ -1563,8 +1563,43 @@ function initPlayground() {
 
 function showPlayOut(text) {
   $("playPreview").classList.add("hidden");
+  $("playAiNote").classList.add("hidden");
   $("playOut").classList.remove("hidden");
   $("playOut").textContent = text;
+}
+
+/* When the user's playground code errors, ask the AI what they meant
+ * and what went wrong. */
+let playAiToken = 0;
+async function explainPlayError(code, errText) {
+  if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) return;
+  const token = ++playAiToken;
+  const note = $("playAiNote");
+  note.classList.remove("hidden");
+  note.textContent = "🤖 Reading your error…";
+  try {
+    const langName = (courseById(playCurrent) || { name: playCurrent }).name;
+    const res = await fetch(AI_FEEDBACK.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+      body: JSON.stringify({
+        model: AI_FEEDBACK.model,
+        temperature: 0.3,
+        max_tokens: 140,
+        messages: [
+          { role: "system", content: "You are a friendly coding tutor. A beginner's code produced an error. In 1-2 short sentences: say what they were probably trying to do, what is actually wrong, and how to fix it. Plain text, no markdown, no greetings." },
+          { role: "user", content: `Language: ${langName}\nTheir code:\n${code.slice(0, 1500)}\n\nThe error:\n${errText.slice(0, 800)}` },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const msg = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (token !== playAiToken) return; // a newer run started
+    if (msg && msg.trim()) note.textContent = "🤖 " + msg.trim();
+    else note.classList.add("hidden");
+  } catch (e) {
+    if (token === playAiToken) note.classList.add("hidden");
+  }
 }
 
 function showPlayPreview(srcdoc) {
@@ -1581,6 +1616,8 @@ function runJsLocally(code) {
   playMsgHandler = (e) => {
     if (!e.data || e.data.tag !== tag) return;
     showPlayOut(e.data.lines.length ? e.data.lines.join("\n") : "(no output — try console.log!)");
+    const errLines = e.data.lines.filter((l) => l.startsWith("⚠️"));
+    if (errLines.length) explainPlayError(code, errLines.join("\n"));
   };
   window.addEventListener("message", playMsgHandler);
   const frame = document.createElement("iframe");
@@ -1598,22 +1635,42 @@ function runJsLocally(code) {
   setTimeout(() => frame.remove(), 4000);
 }
 
+/* Transient server-side sandbox failures from the free runner — retryable */
+const WANDBOX_BUSY = /OCI runtime|crun:|Resource temporarily unavailable|try again/i;
+
 async function runWandbox(compiler, code) {
-  showPlayOut("⏳ Running on a real compiler in the cloud… (a few seconds)");
-  try {
-    const res = await fetch(WANDBOX_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ compiler, code }),
-    });
-    const d = await res.json();
-    let out = "";
-    if (d.compiler_error) out += "🛠️ Compiler says:\n" + d.compiler_error + "\n";
-    if (d.program_output) out += d.program_output;
-    if (d.program_error) out += "⚠️ " + d.program_error;
-    showPlayOut(out.trim() || "(no output)");
-  } catch (e) {
-    showPlayOut("⚠️ Couldn't reach the cloud runner — check your connection and try again.");
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    showPlayOut(attempt === 1
+      ? "⏳ Running on a real compiler in the cloud… (a few seconds)"
+      : `⏳ The cloud runner was busy — retrying (${attempt}/3)…`);
+    try {
+      const res = await fetch(WANDBOX_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ compiler, code }),
+      });
+      const d = await res.json();
+      const all = `${d.compiler_error || ""}${d.program_error || ""}${d.program_output || ""}`;
+      if (WANDBOX_BUSY.test(all) && attempt < 3) {
+        await new Promise((ok) => setTimeout(ok, attempt * 1500));
+        continue;
+      }
+      if (WANDBOX_BUSY.test(all)) {
+        showPlayOut("😮‍💨 The free cloud runner is overloaded right now (lots of people compiling!).\nYour code is fine — wait a few seconds and press ▶ Run again.");
+        return;
+      }
+      let out = "";
+      if (d.compiler_error) out += "🛠️ Compiler says:\n" + d.compiler_error + "\n";
+      if (d.program_output) out += d.program_output;
+      if (d.program_error) out += "⚠️ " + d.program_error;
+      showPlayOut(out.trim() || "(no output)");
+      const errText = `${d.compiler_error || ""}${d.program_error || ""}`.trim();
+      if (errText) explainPlayError(code, errText);
+      return;
+    } catch (e) {
+      if (attempt === 3) showPlayOut("⚠️ Couldn't reach the cloud runner — check your connection and try again.");
+      else await new Promise((ok) => setTimeout(ok, attempt * 1500));
+    }
   }
 }
 
