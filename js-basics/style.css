@@ -715,6 +715,7 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
   background: #fff;
   width: 100%;
 }
+.play-ai { margin: 0 16px 12px; }
 
 /* ===================== AI coach chat ===================== */
 #coachScreen { height: 100vh; display: flex; flex-direction: column; }
