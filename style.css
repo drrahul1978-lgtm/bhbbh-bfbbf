@@ -1017,6 +1017,21 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
+/* Lesson intro card */
+.intro-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  animation: slideUp 0.3s ease;
+}
+.intro-ai {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  margin: 6px 0 14px;
+}
+
 /* Unit guidebook */
 .guide-btn {
   background: none;
