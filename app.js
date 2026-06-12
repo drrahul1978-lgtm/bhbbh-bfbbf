@@ -1502,9 +1502,9 @@ const PLAY = {
   js: { mode: "js", starter: 'console.log("Hello, World!");\n\nfor (let i = 1; i <= 3; i++) {\n  console.log("Count: " + i);\n}' },
   html: { mode: "html", starter: "<h1>Hello!</h1>\n<p>Edit me, then press Run to see the page.</p>\n<button onclick=\"alert('You clicked!')\">Click me</button>" },
   css: { mode: "css", starter: "h1 {\n  color: hotpink;\n}\n\np {\n  font-family: sans-serif;\n  color: #444;\n}\n\nbutton {\n  background: gold;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 8px;\n}" },
-  sql: { mode: "wandbox", compiler: "sqlite-3.46.1", starter: "CREATE TABLE users (name TEXT, age INT);\nINSERT INTO users VALUES ('Ada', 36), ('Linus', 55);\nSELECT * FROM users WHERE age > 40;" },
-  python: { mode: "wandbox", compiler: "cpython-3.13.8", starter: 'print("Hello, World!")\n\nfor i in range(1, 4):\n    print("Count:", i)' },
-  typescript: { mode: "wandbox", compiler: "typescript-5.6.2", starter: 'const greet = (name: string): string => `Hi ${name}`;\nconsole.log(greet("World"));' },
+  sql: { mode: "sql", compiler: "sqlite-3.46.1", starter: "CREATE TABLE users (name TEXT, age INT);\nINSERT INTO users VALUES ('Ada', 36), ('Linus', 55);\nSELECT * FROM users WHERE age > 40;" },
+  python: { mode: "python", compiler: "cpython-3.13.8", starter: 'print("Hello, World!")\n\nfor i in range(1, 4):\n    print("Count:", i)' },
+  typescript: { mode: "ts", compiler: "typescript-5.6.2", starter: 'const greet = (name: string): string => `Hi ${name}`;\nconsole.log(greet("World"));' },
   java: { mode: "wandbox", compiler: "openjdk-jdk-22+36", starter: 'class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}' },
   csharp: { mode: "wandbox", compiler: "mono-6.12.0.199", starter: 'using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, World!");\n    }\n}' },
   cpp: { mode: "wandbox", compiler: "gcc-13.2.0", starter: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}' },
@@ -1520,7 +1520,7 @@ const PLAY = {
   elixir: { mode: "wandbox", compiler: "elixir-1.17.3", starter: 'IO.puts("Hello, World!")\n\nEnum.each(1..3, fn i ->\n  IO.puts("Count: #{i}")\nend)' },
   pascal: { mode: "wandbox", compiler: "fpc-3.2.2", starter: "program Hello;\nvar\n  i: Integer;\nbegin\n  writeln('Hello, World!');\n  for i := 1 to 3 do\n    writeln('Count: ', i);\nend." },
   bash: { mode: "wandbox", compiler: "bash", starter: 'echo "Hello, World!"\n\nfor i in 1 2 3; do\n  echo "Count: $i"\ndone' },
-  lua: { mode: "wandbox", compiler: "lua-5.4.7", starter: 'print("Hello, World!")\n\nfor i = 1, 3 do\n  print("Count: " .. i)\nend' },
+  lua: { mode: "lua", compiler: "lua-5.4.7", starter: 'print("Hello, World!")\n\nfor i = 1, 3 do\n  print("Count: " .. i)\nend' },
   r: { mode: "wandbox", compiler: "r-4.4.1", starter: 'cat("Hello, World!\\n")\n\nfor (i in 1:3) {\n  cat("Count:", i, "\\n")\n}' },
   perl: { mode: "wandbox", compiler: "perl-5.42.0", starter: 'print "Hello, World!\\n";\n\nfor my $i (1..3) {\n    print "Count: $i\\n";\n}' },
   kotlin: { mode: "none", starter: 'fun main() {\n    println("Hello, World!")\n}' },
@@ -1529,6 +1529,135 @@ const PLAY = {
   objc: { mode: "none", starter: '#import <Foundation/Foundation.h>\n\nint main() {\n    NSLog(@"Hello, World!");\n    return 0;\n}' },
   vb: { mode: "none", starter: 'Module Program\n    Sub Main()\n        Console.WriteLine("Hello, World!")\n    End Sub\nEnd Module' },
 };
+
+/* Local WASM engines: Python, Lua, SQL and TypeScript run fully in the
+ * browser — no cloud needed. Downloaded once from a CDN, then cached. */
+const _scriptPromises = {};
+function loadScriptOnce(src) {
+  if (!_scriptPromises[src]) {
+    _scriptPromises[src] = new Promise((ok, bad) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = ok;
+      s.onerror = () => { delete _scriptPromises[src]; bad(new Error("script load failed")); };
+      document.head.appendChild(s);
+    });
+  }
+  return _scriptPromises[src];
+}
+
+let pyodideP = null;
+async function runPythonLocal(code) {
+  let py;
+  try {
+    if (!pyodideP) {
+      showPlayOut("⏳ Setting up Python in your browser (one-time download)…");
+      pyodideP = loadScriptOnce("https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js")
+        .then(() => loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" }));
+    }
+    py = await pyodideP;
+  } catch (e) {
+    pyodideP = null;
+    return runWandbox(PLAY.python.compiler, code); // engine didn't load — use the cloud
+  }
+  showPlayOut("⏳ Running…");
+  const out = [];
+  py.setStdout({ batched: (s) => out.push(s) });
+  py.setStderr({ batched: (s) => out.push("⚠️ " + s) });
+  let errText = "";
+  try {
+    await py.runPythonAsync(code);
+  } catch (e) {
+    errText = String(e.message || e);
+    const lines = errText.trim().split("\n");
+    out.push("⚠️ " + lines.slice(-3).join("\n"));
+  }
+  showPlayOut(out.join("\n") || "(no output — try print()!)");
+  if (errText) explainPlayError(code, errText);
+}
+
+let luaReady = null;
+async function runLuaLocal(code) {
+  try {
+    if (!luaReady) {
+      showPlayOut("⏳ Setting up Lua in your browser (one-time download)…");
+      luaReady = loadScriptOnce("https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js");
+    }
+    await luaReady;
+  } catch (e) {
+    luaReady = null;
+    return runWandbox(PLAY.lua.compiler, code);
+  }
+  showPlayOut("⏳ Running…");
+  const out = [];
+  window.__luaPrint = (s) => out.push(String(s));
+  const wrapped =
+    'local js = require "js"\n' +
+    "print = function(...)\n" +
+    "  local t = {}\n" +
+    "  for i = 1, select('#', ...) do t[#t+1] = tostring(select(i, ...)) end\n" +
+    "  js.global:__luaPrint(table.concat(t, '\\t'))\n" +
+    "end\n" + code;
+  let errText = "";
+  try {
+    fengari.load(wrapped)();
+  } catch (e) {
+    errText = String(e.message || e);
+    out.push("⚠️ " + errText);
+  }
+  showPlayOut(out.join("\n") || "(no output — try print()!)");
+  if (errText) explainPlayError(code, errText);
+}
+
+let sqlJsP = null;
+async function runSqlLocal(code) {
+  let SQL;
+  try {
+    if (!sqlJsP) {
+      showPlayOut("⏳ Setting up SQLite in your browser (one-time download)…");
+      sqlJsP = loadScriptOnce("https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js")
+        .then(() => initSqlJs({ locateFile: (f) => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f }));
+    }
+    SQL = await sqlJsP;
+  } catch (e) {
+    sqlJsP = null;
+    return runWandbox(PLAY.sql.compiler, code);
+  }
+  showPlayOut("⏳ Running…");
+  try {
+    const db = new SQL.Database();
+    const results = db.exec(code);
+    let out = "";
+    results.forEach((r) => {
+      out += r.columns.join(" | ") + "\n";
+      out += r.columns.map(() => "—").join("-|-") + "\n";
+      r.values.forEach((row) => { out += row.join(" | ") + "\n"; });
+      out += "\n";
+    });
+    db.close();
+    showPlayOut(out.trim() || "✅ Statements ran fine (no rows to show — add a SELECT!)");
+  } catch (e) {
+    const errText = String(e.message || e);
+    showPlayOut("⚠️ " + errText);
+    explainPlayError(code, errText);
+  }
+}
+
+let tsP = null;
+async function runTsLocal(code) {
+  try {
+    if (!tsP) {
+      showPlayOut("⏳ Setting up TypeScript in your browser (one-time download)…");
+      tsP = loadScriptOnce("https://cdn.jsdelivr.net/npm/typescript@5.6.2/lib/typescript.min.js");
+    }
+    await tsP;
+    const js = window.ts.transpile(code, { target: 99 });
+    runJsLocally(js, code);
+  } catch (e) {
+    tsP = null;
+    runWandbox(PLAY.typescript.compiler, code);
+  }
+}
 
 const playBuffers = {};
 let playCurrent = "js";
@@ -1609,7 +1738,7 @@ function showPlayPreview(srcdoc) {
 }
 
 let playMsgHandler = null;
-function runJsLocally(code) {
+function runJsLocally(code, sourceForAi) {
   showPlayOut("⏳ Running…");
   const tag = "kodexa-run-" + Date.now();
   if (playMsgHandler) window.removeEventListener("message", playMsgHandler);
@@ -1617,7 +1746,7 @@ function runJsLocally(code) {
     if (!e.data || e.data.tag !== tag) return;
     showPlayOut(e.data.lines.length ? e.data.lines.join("\n") : "(no output — try console.log!)");
     const errLines = e.data.lines.filter((l) => l.startsWith("⚠️"));
-    if (errLines.length) explainPlayError(code, errLines.join("\n"));
+    if (errLines.length) explainPlayError(sourceForAi || code, errLines.join("\n"));
   };
   window.addEventListener("message", playMsgHandler);
   const frame = document.createElement("iframe");
@@ -1679,6 +1808,10 @@ function runPlayground() {
   const code = $("playEditor").value;
   sfx.select();
   if (cfg.mode === "js") runJsLocally(code);
+  else if (cfg.mode === "python") runPythonLocal(code);
+  else if (cfg.mode === "lua") runLuaLocal(code);
+  else if (cfg.mode === "sql") runSqlLocal(code);
+  else if (cfg.mode === "ts") runTsLocal(code);
   else if (cfg.mode === "html") showPlayPreview(code);
   else if (cfg.mode === "css") showPlayPreview(
     `<style>${code}</style><h1>Style me!</h1><p>This paragraph is your canvas. Change the CSS and press Run again.</p><button>A button</button>`);
