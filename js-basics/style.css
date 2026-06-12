@@ -168,6 +168,75 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
 .home-hero h1 { font-size: 2rem; font-weight: 800; line-height: 1.25; }
 .home-hero p { color: var(--muted); margin-top: 10px; max-width: 52ch; margin-inline: auto; }
 
+/* Continue card + daily quests */
+.continue-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cc, var(--accent)) 22%, var(--panel)), var(--panel));
+  border: 1px solid var(--cc, var(--accent));
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  text-align: left;
+  color: var(--text);
+  animation: slideUp 0.35s ease both;
+  transition: transform 0.12s;
+}
+.continue-card:hover { transform: translateY(-2px); }
+.continue-card .cc-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--cc, var(--accent));
+  color: #fff;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.cont-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cont-text b { font-size: 1rem; }
+.cont-text i { font-style: normal; color: var(--muted); font-size: 0.83rem; }
+.cont-go { font-size: 1.1rem; color: var(--cc, var(--accent)); }
+
+.quest-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  animation: slideUp 0.4s ease both 0.05s;
+}
+.quest-title {
+  font-family: "Sora", sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.quest-reward, .quest-done { font-family: "Inter", sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--accent-2); }
+.quest-done { color: var(--green); }
+.quest-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.quest-row.complete .q-label { color: var(--dim); text-decoration: line-through; }
+.q-label { flex: 1; }
+.q-bar { width: 76px; height: 7px; border-radius: 99px; background: var(--line); overflow: hidden; flex-shrink: 0; }
+.q-bar i { display: block; height: 100%; background: var(--grad); border-radius: 99px; transition: width 0.4s; }
+.quest-row.complete .q-bar i { background: var(--green); }
+.q-count { color: var(--muted); font-size: 0.78rem; min-width: 38px; text-align: right; }
+.quest-row.complete .q-count { color: var(--green); font-weight: 800; }
+
 .course-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

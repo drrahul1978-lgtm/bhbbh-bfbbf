@@ -123,11 +123,39 @@ function levelProgress(xp) {
   return { lvl, pct: Math.round(((xp - cur) / (next - cur)) * 100), toNext: next - xp };
 }
 
+/* ===================== Daily quests ===================== */
+function dailyData() {
+  const day = todayStr();
+  if (!state.daily || state.daily.day !== day) {
+    state.daily = { day, xp: 0, lessons: 0, correct: 0, claimed: false };
+  }
+  return state.daily;
+}
+
+const DAILY_GOALS = [
+  { icon: "⚡", label: "Earn 30 XP", key: "xp", max: 30 },
+  { icon: "📘", label: "Finish 1 lesson", key: "lessons", max: 1 },
+  { icon: "✅", label: "15 correct answers", key: "correct", max: 15 },
+];
+
+function checkDailyQuests() {
+  const d = dailyData();
+  if (d.claimed) return;
+  if (DAILY_GOALS.every((g) => (d[g.key] || 0) >= g.max)) {
+    d.claimed = true;
+    state.gems += 15;
+    saveState();
+    sfx.sparkle();
+    showToast("🎁 <b>Daily quests complete!</b> +15 💎");
+  }
+}
+
 /* Single entry point for earning XP: persists, updates UI, floats the
  * gain near `anchor` if given, and celebrates level-ups. */
 function addXp(amount, anchor) {
   const before = levelProgress(state.xp).lvl;
   state.xp += amount;
+  dailyData().xp += amount;
   saveState();
   renderHeader();
   bumpStat("statXp");
@@ -138,6 +166,7 @@ function addXp(amount, anchor) {
     sfx.sparkle();
     confetti(24);
   }
+  checkDailyQuests();
 }
 
 /* ===================== Toast ===================== */
@@ -426,10 +455,53 @@ function enterApp() {
 }
 
 /* ===================== Home: course catalog ===================== */
+function flatToUL(course, flatIdx) {
+  let i = 0;
+  for (let u = 0; u < course.units.length; u++)
+    for (let l = 0; l < course.units[u].lessons.length; l++) {
+      if (i === flatIdx) return { u, l, title: course.units[u].lessons[l].title };
+      i++;
+    }
+  return null;
+}
+
 function renderHome() {
   $("greeting").innerHTML = profile && profile.name !== "Guest"
     ? `Hey ${escapeHtml(profile.name)} 👋<br>What are we mastering today?`
     : "Pick a language.<br>Master it.";
+
+  // Continue card + daily quests
+  const cards = $("homeCards");
+  let html = "";
+  const last = state.lastCourse && courseById(state.lastCourse);
+  const next = last ? flatToUL(last, firstIncompleteIndex(last)) : null;
+  if (last && next) {
+    html += `
+      <button class="continue-card" id="continueBtn" style="--cc:${last.color}">
+        <span class="cc-badge">${escapeHtml(last.badge)}</span>
+        <span class="cont-text"><b>Continue ${escapeHtml(last.name)}</b><i>${escapeHtml(next.title)}</i></span>
+        <span class="cont-go">▶</span>
+      </button>`;
+  }
+  const d = dailyData();
+  html += `
+    <div class="quest-card">
+      <div class="quest-title">🗓️ Daily Quests ${d.claimed ? '<span class="quest-done">done! +15 💎</span>' : '<span class="quest-reward">reward: 15 💎</span>'}</div>
+      ${DAILY_GOALS.map((g) => {
+        const cur = Math.min(d[g.key] || 0, g.max);
+        return `
+        <div class="quest-row${cur >= g.max ? " complete" : ""}">
+          <span class="q-icon">${g.icon}</span>
+          <span class="q-label">${g.label}</span>
+          <span class="q-bar"><i style="width:${(cur / g.max) * 100}%"></i></span>
+          <span class="q-count">${cur >= g.max ? "✓" : cur + "/" + g.max}</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+  cards.innerHTML = html;
+  const cont = $("continueBtn");
+  if (cont) cont.addEventListener("click", () => startLesson(last.id, next.u, next.l));
+
   const grid = $("courseGrid");
   grid.innerHTML = "";
   COURSES.forEach((course, i) => {
@@ -461,6 +533,7 @@ function renderHome() {
 /* ===================== Course page ===================== */
 function openCourse(id) {
   activeCourse = courseById(id);
+  if (state.lastCourse !== id) { state.lastCourse = id; saveState(); }
   renderCourse();
   show("courseScreen");
 }
@@ -932,10 +1005,6 @@ function renderCode(ex, area, setAnswer, onReady, onNotReady) {
   });
   editor.append(gutter, input);
   area.appendChild(editor);
-  const hint = document.createElement("p");
-  hint.className = "code-hint";
-  hint.textContent = "Spacing, quote style and a trailing ; are forgiven — the rest is on you 😉";
-  area.appendChild(hint);
   setTimeout(() => input.focus(), 60);
 
   setAnswer(() => ({ ok: gradeCode(ex, input.value), correctText: ex.a, typed: input.value }));
@@ -978,6 +1047,7 @@ $("checkBtn").addEventListener("click", () => {
 
   if (ok) {
     lesson.correct++;
+    dailyData().correct++;
     clearMistake(ex, lesson.cid);
     addXp(XP_PER_CORRECT, btn);
     fb.className = "feedback good";
@@ -1023,9 +1093,11 @@ function endLesson(passed) {
   if (passed) {
     const perfect = lesson.mistakes === 0;
     state.completed[lessonKey(lesson.cid, lesson.u, lesson.l)] = true;
+    dailyData().lessons++;
     addXp(XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0));
     bumpStreak();
     saveState();
+    checkDailyQuests();
     const earned = XP_LESSON_BONUS + (perfect ? XP_PERFECT_BONUS : 0) + lesson.total * XP_PER_CORRECT;
     const accuracy = Math.round((lesson.total / (lesson.total + lesson.mistakes)) * 100);
     const cheer = perfect
@@ -1168,6 +1240,7 @@ function buildFeedCard(ex, course) {
     if (ok) {
       feedCorrect++;
       feedCombo++;
+      dailyData().correct++;
       clearMistake(ex, course.id);
       addXp(XP_PER_CORRECT);
       bumpStreak();
