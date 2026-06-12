@@ -987,6 +987,7 @@ async function requestAiNote(ex, typed, lang, container) {
 
 /* --- write real code with your keyboard --- */
 function renderCode(ex, area, setAnswer, onReady, onNotReady) {
+  addCode(area, ex.code);
   const editor = document.createElement("div");
   editor.className = "code-editor";
   const gutter = document.createElement("span");

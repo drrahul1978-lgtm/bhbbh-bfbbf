@@ -102,7 +102,7 @@ function numbersUnit(wrap, num) {
           mc("What is the output?", wrap("9 * 9"), ["81", "18", "99", "72"]),
           typeEx("Type the output of this code", wrap("60 - 12"), "48"),
           mc("What is the output?", wrap("(3 + 3) * (2 + 2)"), ["24", "12", "36", "10"]),
-          typeEx("Type the output of this code", wrap("7 * 11"), "77"),
+          codeEx("⌨️ Your turn — type ONE line of code that prints the result of 7 * 11", wrap("7 * 11"), [wrap("77")]),
         ],
       },
     ],
@@ -111,6 +111,15 @@ function numbersUnit(wrap, num) {
 
 /* Print wrappers for hand-written courses that also get a Number Ninja unit */
 const NUM_WRAP = { js: (e) => `console.log(${e});` };
+
+/* Make sure a sampled lesson contains at least one type-the-code exercise */
+function ensureCodeEx(list, pool) {
+  if (!list.some((e) => e.t === "code")) {
+    const c = pool.find((e) => e.t === "code" && !list.includes(e));
+    if (c) list[list.length - 1] = c;
+  }
+  return list;
+}
 
 /* Appends Review + Mastery units built from a course's own exercises */
 function withReviewUnits(units, startNum) {
@@ -122,16 +131,16 @@ function withReviewUnits(units, startNum) {
       title: `Unit ${startNum} · Review`,
       desc: "Strengthen what you've learned",
       lessons: [
-        { title: "Review I", exercises: sample(pool.slice(0, half), 6, 0) },
-        { title: "Review II", exercises: sample(pool.slice(half), 6, 1) },
+        { title: "Review I", exercises: ensureCodeEx(sample(pool.slice(0, half), 6, 0), pool) },
+        { title: "Review II", exercises: ensureCodeEx(sample(pool.slice(half), 6, 1), pool) },
       ],
     },
     {
       title: `Unit ${startNum + 1} · Mastery`,
       desc: "Prove you've mastered it all",
       lessons: [
-        { title: "Mastery Exam A", exercises: sample(pool, 7, 2) },
-        { title: "Mastery Exam B", exercises: sample(pool, 7, 5) },
+        { title: "Mastery Exam A", exercises: ensureCodeEx(sample(pool, 7, 2), pool) },
+        { title: "Mastery Exam B", exercises: ensureCodeEx(sample(pool, 7, 5), pool) },
       ],
     },
   ];
@@ -140,6 +149,14 @@ function withReviewUnits(units, startNum) {
 /* ---------- generated course builder (10 units per language) ---------- */
 function buildCourse(meta, g, x) {
   const N = meta.name;
+  // derived "type it yourself" exercises, one per unit, in real syntax
+  const fl = (s) => String(s).split("\n")[0];
+  const ifLineBlank = fl(g.ifFill.code);
+  const ifLineAns = ifLineBlank.replace("___", g.ifFill.choices[0]);
+  const loopLineBlank = fl(g.loopFill.code);
+  const loopLineAns = loopLineBlank.replace("___", g.loopFill.choices[0]);
+  const funcLines = String(g.funcOut.code).split("\n");
+  const funcMasked = ["___", ...funcLines.slice(1)].join("\n");
   const units = [
     {
       title: "Unit 1 · First Steps",
@@ -179,6 +196,7 @@ function buildCourse(meta, g, x) {
             g.declTokens ? order("Build the code: store 13 in a variable called age", g.declTokens) : null,
             fill("Fill in the blank", g.declFill.code, g.declFill.choices),
             typeEx("Type the output of this code", g.varPrint.code, g.varPrint.ans),
+            codeEx("⌨️ Your turn — type the code that creates a variable x holding 5", g.decl.line),
           ].filter(Boolean),
         },
         {
@@ -264,6 +282,7 @@ function buildCourse(meta, g, x) {
             G.condTrue(),
             fill("Fill in the keyword", g.ifFill.code, g.ifFill.choices),
             mc("What is the output?", g.ifQ.code, [g.ifQ.out, ...g.ifQ.wrong]),
+            codeEx("⌨️ Your turn — type this complete opening line, filling in the blank", ifLineAns, null, { code: ifLineBlank }),
           ],
         },
         {
@@ -300,6 +319,7 @@ function buildCourse(meta, g, x) {
             mc("What is the output?", g.loopQ.code, [g.loopQ.out, ...g.loopQ.wrong]),
             fill("Fill in the blank", g.loopFill.code, g.loopFill.choices),
             typeEx("How many times does this loop print? (type a number)", x.loopCount.code, x.loopCount.ans),
+            codeEx("⌨️ Your turn — type this complete loop line, filling in the blank", loopLineAns, null, { code: loopLineBlank }),
           ],
         },
         {
@@ -332,6 +352,7 @@ function buildCourse(meta, g, x) {
             G.returnDef(),
             g.returnTokens ? order("Build the code: return a plus b", g.returnTokens) : null,
             mc("What is the output?", g.funcOut.code, [g.funcOut.out, ...g.funcOut.wrong]),
+            codeEx("⌨️ Your turn — type the missing FIRST line of this function", fl(g.funcOut.code), null, { code: funcMasked }),
           ].filter(Boolean),
         },
       ],
@@ -356,6 +377,7 @@ function buildCourse(meta, g, x) {
             mc("What is the output?", x.listLen.code, [x.listLen.out, ...x.listLen.wrong]),
             mc(x.listAdd.q, x.listAdd.code || null, x.listAdd.choices),
             typeEx("Type the output of this code", x.listGet.code, x.listGet.ans),
+            codeEx("⌨️ Your turn — type the code that creates a list of 1, 2, 3", x.listLit.line),
           ],
         },
       ],
@@ -447,6 +469,7 @@ const JS_UNITS = [
           fill("Make greeting a string", "let greeting = ___;", ['"Hello"', "Hello", "(Hello)"]),
           mc("What is the result of this expression?", '"Hi" + " there"', ['"Hi there"', '"Hi+there"', "An error", "0"]),
           typeEx("Type the output of this code", 'console.log(typeof "cat");', "string"),
+          codeEx('⌨️ Your turn — type the code that prints the type of "cat"', 'console.log(typeof "cat");'),
           mc("Joining two strings with + is called…", null, ["concatenation", "addition", "compression", "stringification"]),
         ],
       },
@@ -476,6 +499,7 @@ const JS_UNITS = [
           mc("What is the output?", "console.log(10 / 4);", ["2.5", "2", "3", "2.25"]),
           mc("What does x += 3 mean?", null, ["x = x + 3", "x === 3", "x is at least 3", "Add x to 3 and throw it away"]),
           order("Build the code: store a plus b in a variable called sum", ["let", "sum", "=", "a", "+", "b", ";"]),
+          codeEx("⌨️ Your turn — type ONE line that prints the result of 4 * 5", "console.log(4 * 5);", ["console.log(20);"]),
         ],
       },
       {
@@ -505,6 +529,7 @@ const JS_UNITS = [
           mc("In an if statement, the condition goes inside…", null,
             ['parentheses ( )', "curly braces { }", "square brackets [ ]", 'quotes " "']),
           order("Build the code: if x is greater than 5", ["if", "(", "x", ">", "5", ")"]),
+          codeEx("⌨️ Your turn — type the opening line of an if that checks whether x is greater than 5", "if (x > 5) {", ["if (x > 5)"]),
         ],
       },
       {
@@ -534,6 +559,7 @@ const JS_UNITS = [
           typeEx("How many times does this loop run? (type a number)", 'for (let i = 0; i < 4; i++) {\n  console.log("hi");\n}', "4"),
           mc("What does i++ do?", null, ["Adds 1 to i", "Doubles i", "Resets i to 0", "Deletes i"]),
           order("Build a for loop header counting 0, 1, 2", ["for", "(", "let i = 0", ";", "i < 3", ";", "i++", ")"]),
+          codeEx("⌨️ Your turn — type a for-loop header that counts 0, 1, 2", "for (let i = 0; i < 3; i++) {", ["for (let i = 0; i < 3; i++)"]),
         ],
       },
       {
@@ -593,6 +619,7 @@ const JS_UNITS = [
           fill("How many items? Fill in the property", 'let colors = ["red", "blue"];\nconsole.log(colors.___);', ["length", "size", "count"]),
           mc("What is the output?", "console.log([1, 2, 3].length);", ["3", "2", "123", "[1, 2, 3]"]),
           order("Build the code: an array of the numbers 1, 2, 3 called nums", ["let", "nums", "=", "[", "1, 2, 3", "]", ";"]),
+          codeEx("⌨️ Your turn — type the code that creates an array nums holding 1, 2, 3", "let nums = [1, 2, 3];", ["const nums = [1, 2, 3];"]),
         ],
       },
       {
@@ -669,6 +696,7 @@ const HTML_UNITS = [
           typeEx("Which tag makes a dropdown menu? (type it without brackets)", "<___>\n  <option>Red</option>\n</___>", "select"),
           mc("What does <label> do?", null,
             ["Describes an input so users (and screen readers) know what it's for", "Prints a sticker", "Names the page", "Adds a border"]),
+          codeEx("⌨️ Your turn — type the HTML for a button that says Go", "<button>Go</button>"),
         ],
       },
     ],
@@ -684,6 +712,7 @@ const HTML_UNITS = [
           mc("Which tag is a table ROW?", null, ["<tr>", "<td>", "<row>", "<line>"]),
           fill("Add a data cell to the row", "<tr>\n  <___>42</td>\n</tr>", ["td", "cell", "tc"]),
           mc("Which tag is a bold HEADER cell?", null, ["<th>", "<td>", "<head>", "<hd>"]),
+          codeEx("⌨️ Your turn — type a table row holding one cell with 42 in it", "<tr><td>42</td></tr>"),
         ],
       },
       {
@@ -712,6 +741,7 @@ const HTML_UNITS = [
             ['<link rel="stylesheet" href="style.css">', '<css src="style.css">', '<style href="style.css">', '<load css="style.css">']),
           mc("Which line loads a JavaScript file?", null,
             ['<script src="app.js"></script>', '<js href="app.js">', '<javascript src="app.js">', '<run file="app.js">']),
+          codeEx("⌨️ Your turn — type the tag that names the browser tab: Home", "<title>Home</title>"),
         ],
       },
       {
@@ -776,6 +806,7 @@ const CSS_UNITS = [
           mc("From inside out, the box model layers are…", null,
             ["content → padding → border → margin", "margin → border → padding → content", "content → margin → padding → border", "border → content → padding → margin"]),
           typeEx("Which property rounds the corners? (type it)", ".card {\n  ___: 12px;\n}", "border-radius"),
+          codeEx("⌨️ Your turn — type the declaration that rounds corners by 12px", "border-radius: 12px;"),
           mc("width: 100% makes an element…", null,
             ["As wide as its container", "100 pixels wide", "Full screen always", "Invisible"]),
         ],
@@ -803,6 +834,7 @@ const CSS_UNITS = [
         exercises: [
           mc("Which writes a color from red/green/blue amounts?", null, ["rgb(255, 0, 0)", "color(red)", "mix(r, g, b)", "#rgb only"]),
           mc("opacity: 0.5 makes an element…", null, ["Half transparent", "Half as wide", "Twice as bright", "Invisible"]),
+          codeEx("⌨️ Your turn — type the declaration that makes an element half transparent", "opacity: 0.5;"),
           fill("Fade between two colors", "background: linear-___(red, blue);", ["gradient", "fade", "blend"]),
           mc("Which color is #00ff00?", null, ["green", "red", "blue", "yellow"]),
         ],
@@ -832,6 +864,7 @@ const CSS_UNITS = [
           mc("1em is relative to…", null,
             ["The element's font size", "One pixel", "The screen width", "The em dash"]),
           fill("Make it half the parent's width", "width: 50___;", ["%", "px", "em"]),
+          codeEx("⌨️ Your turn — type the declaration that makes the width half of the parent", "width: 50%;"),
         ],
       },
       {
@@ -898,6 +931,7 @@ const SQL_UNITS = [
           fill("Complete the delete", "DELETE ___ users WHERE id = 1;", ["FROM", "IN", "OFF"]),
           mc("What happens if you run DELETE FROM users with NO WHERE clause?", null,
             ["Every row in the table is deleted", "Nothing", "One random row is deleted", "An error — WHERE is required"]),
+          codeEx("⌨️ Your turn — type the statement that deletes the user with id 1 from users", "DELETE FROM users WHERE id = 1;", null, { ci: true }),
         ],
       },
       {
@@ -926,6 +960,7 @@ const SQL_UNITS = [
           fill("Give the column a text type", "CREATE TABLE users (\n  name ___(50)\n);", ["VARCHAR", "TEXTBOX", "STRINGY"]),
           mc("NULL in a row means…", null, ["The value is missing/unknown", "The value is zero", "The text 'NULL'", "An error"]),
           mc("Which combines two conditions in a WHERE clause?", null, ["AND", "PLUS", "WITH", "&&&"]),
+          codeEx("⌨️ Your turn — type the query that counts ALL rows in users", "SELECT COUNT(*) FROM users;", null, { ci: true }),
         ],
       },
       {
@@ -953,6 +988,7 @@ const SQL_UNITS = [
           mc("WHERE city IN ('Rome', 'Paris') matches…", null,
             ["Rows whose city is Rome OR Paris", "Rows in both cities", "Cities containing those letters", "Nothing — invalid"]),
           fill("Match either of the two cities", "WHERE city ___ ('Rome', 'Paris');", ["IN", "OF", "AT"]),
+          codeEx("⌨️ Your turn — type the query that gets all users sorted by name, highest first", "SELECT * FROM users ORDER BY name DESC;", null, { ci: true }),
         ],
       },
       {
@@ -2226,6 +2262,7 @@ EXTRA_UNITS.python = [
           mc("How do you ADD a new key to a dict?", null,
             ['person["city"] = "London"', 'person.push("city", "London")', 'person.add("city")', 'insert person city']),
           typeEx("Type the output of this code", 'd = {"a": 1, "b": 2}\nprint(len(d))', "2"),
+          codeEx('⌨️ Your turn — type the code that prints the value stored under "name" in person', 'print(person["name"])', ["print(person['name'])"]),
         ],
       },
       {
@@ -2281,6 +2318,7 @@ EXTRA_UNITS.python = [
           mc("What is int(\"5\") + 2?", null, ["7", '"52"', '"7"', "Error"]),
           mc("What is str(5) + \"!\"?", null, ['"5!"', "6", "5", "Error"]),
           mc("What is round(3.7)?", null, ["4", "3", "3.7", "Error"]),
+          codeEx("⌨️ Your turn — type the line that reads the user's typing into a variable called name", "name = input()"),
         ],
       },
       {
@@ -2373,6 +2411,7 @@ EXTRA_UNITS.python = [
             ["Imports just the randint function", "Imports everything", "Makes randint random", "Renames random"]),
           mc("random.randint(1, 6) is perfect for…", null,
             ["Rolling a dice — a random whole number from 1 to 6", "Counting to 6", "Rounding to 6", "Making 6 random files"]),
+          codeEx("⌨️ Your turn — type the line that imports the random module", "import random"),
         ],
       },
       {
@@ -2610,6 +2649,7 @@ EXTRA_UNITS.java = [
           mc("How do you CREATE a Dog object?", null,
             ["Dog d = new Dog();", "Dog d = Dog.create();", "make Dog d;", "object d = Dog;"]),
           fill("Fill in the keyword", "Dog d = ___ Dog();", ["new", "make", "create"]),
+          codeEx("⌨️ Your turn — type the line that creates a new Dog object stored in d", "Dog d = new Dog();"),
           mc("A class is a … and an object is a …", null,
             ["blueprint / thing built from it", "thing / blueprint", "loop / variable", "file / folder"]),
           mc("What is the output?", 'class Dog {\n    String name = "Rex";\n}\n// later…\nDog d = new Dog();\nSystem.out.println(d.name);', ["Rex", "name", "Dog", "null"]),
@@ -2643,6 +2683,7 @@ EXTRA_UNITS.java = [
           mc("What is the output?", 'ArrayList<String> l = new ArrayList<>();\nl.add("a");\nl.add("b");\nSystem.out.println(l.size());', ["2", "1", "b", "Error"]),
           typeEx("Type the output of this code", 'ArrayList<String> l = new ArrayList<>();\nl.add("hi");\nSystem.out.println(l.get(0));', "hi"),
           mc("list.get(0) returns…", null, ["The first element", "The last element", "The list size", "Nothing"]),
+          codeEx('⌨️ Your turn — type the line that adds "apple" to list', 'list.add("apple");'),
         ],
       },
       {
