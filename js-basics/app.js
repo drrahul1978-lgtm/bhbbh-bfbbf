@@ -207,8 +207,8 @@ const TRACKABLE = ["mc", "fill", "type", "code"];
 const mistakeKey = (courseId, ex) => courseId + "|" + ex.q + "|" + (ex.code || "");
 
 function recordMistake(ex, courseId) {
-  if (!TRACKABLE.includes(ex.t)) return;
-  const k = mistakeKey(courseId, ex);
+  const k = ex.gen ? ex.srcKey : (TRACKABLE.includes(ex.t) ? mistakeKey(courseId, ex) : null);
+  if (!k) return;
   const m = state.mistakes[k] || { c: 0, t: 0 };
   m.c = Math.min(m.c + 1, 9);
   m.t = Date.now();
@@ -222,7 +222,7 @@ function recordMistake(ex, courseId) {
 }
 
 function clearMistake(ex, courseId) {
-  const k = mistakeKey(courseId, ex);
+  const k = ex.gen ? ex.srcKey : mistakeKey(courseId, ex);
   const m = state.mistakes[k];
   if (!m) return;
   m.c--;
@@ -607,11 +607,76 @@ function beginLesson(cid, u, l) {
     mistakes: 0,
     hearts: MAX_HEARTS,
     checked: false,
+    intro: true,
     getAnswer: null,
   };
   show("lessonScreen");
   renderLessonChrome();
-  nextExercise();
+  renderLessonIntro();
+}
+
+/* Intro card shown before the questions: what this unit/section is about */
+const INTRO_KEY = "kodexa-intros";
+
+function renderLessonIntro() {
+  const c = activeCourse;
+  const unit = c.units[lesson.u];
+  const lessonData = unit.lessons[lesson.l];
+  const snippets = unitCheats(unit).slice(0, 3);
+  const area = $("exerciseArea");
+  $("feedback").className = "feedback hidden";
+  area.innerHTML = `
+    <div class="intro-card">
+      <div class="guide-head">
+        <span class="cc-badge" style="background:${c.color}">${escapeHtml(c.badge)}</span>
+        <div>
+          <h2>${escapeHtml(unit.title)}</h2>
+          <p>${escapeHtml(lessonData.title)} · ${lesson.total} questions</p>
+        </div>
+      </div>
+      <p class="intro-ai" id="introAi">📚 ${escapeHtml(unit.desc)}.</p>
+      ${snippets.length ? '<div class="guide-label">Code you\'ll meet</div>' +
+        snippets.map((s) => `<pre class="guide-snippet">${escapeHtml(s)}</pre>`).join("") : ""}
+    </div>`;
+  const btn = $("checkBtn");
+  btn.textContent = "START LESSON";
+  btn.className = "big-btn";
+  btn.disabled = false;
+  unitIntroText(c, unit, lessonData);
+}
+
+async function unitIntroText(course, unit, lessonData) {
+  const el = $("introAi");
+  if (!el) return;
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem(INTRO_KEY)) || {}; } catch (e) { /* fresh */ }
+  const key = course.id + "|" + unit.title + "|" + lessonData.title;
+  if (cache[key]) { el.textContent = "📚 " + cache[key]; return; }
+  if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) return;
+  try {
+    const res = await fetch(AI_FEEDBACK.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+      body: JSON.stringify({
+        model: AI_FEEDBACK.model,
+        temperature: 0.4,
+        max_tokens: 120,
+        messages: [
+          { role: "system", content: "Write 2 short, friendly sentences for a total beginner explaining what this coding lesson teaches and why it's useful. No markdown, no lists, no greetings." },
+          { role: "user", content: `${course.name} course — ${unit.title} (${unit.desc}). Lesson: ${lessonData.title}.` },
+        ],
+      }),
+    });
+    const data = await res.json();
+    const msg = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (msg && msg.trim() && $("introAi")) {
+      cache[key] = msg.trim();
+      const keys = Object.keys(cache);
+      if (keys.length > 200) delete cache[keys[0]];
+      localStorage.setItem(INTRO_KEY, JSON.stringify(cache));
+      $("introAi").textContent = "📚 " + msg.trim();
+    }
+  } catch (e) { /* keep the template text */ }
 }
 
 function renderLessonChrome() {
@@ -900,6 +965,7 @@ function renderType(ex, area, setAnswer, onReady, onNotReady) {
 /* --- check / continue flow --- */
 $("checkBtn").addEventListener("click", () => {
   if (!lesson) return;
+  if (lesson.intro) { lesson.intro = false; sfx.select(); nextExercise(); return; }
   if (lesson.checked) { nextExercise(); return; }
 
   const { ok, correctText, typed } = lesson.getAnswer();
@@ -1199,25 +1265,88 @@ function buildFeedCard(ex, course) {
   return cardEl;
 }
 
-/* ===================== Targeted practice ===================== */
-function renderTarget() {
+/* ===================== Smart practice (AI-generated from your mistakes) ===================== */
+async function aiGenerateQuestions(spots) {
+  const list = spots.slice(0, 6);
+  const lines = list.map((w, i) =>
+    `${i}: [${w.course.name}] Q: ${w.ex.q}` +
+    (w.ex.code ? ` | code: ${String(w.ex.code).replace(/\n/g, " ⏎ ")}` : "") +
+    ` | correct: ${w.ex.choices ? w.ex.choices[w.ex.a] : w.ex.a}`).join("\n");
+  const res = await fetch(AI_FEEDBACK.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_FEEDBACK.key },
+    body: JSON.stringify({
+      model: AI_FEEDBACK.model,
+      temperature: 0.6,
+      max_tokens: 900,
+      messages: [
+        { role: "system", content: 'You write NEW beginner quiz questions for a coding app. Reply with ONLY a JSON array — no markdown, no prose. One item per input line, same order. Item shape: {"src": <input line number>, "q": "question text", "code": "code snippet or null", "choices": ["correct answer", "wrong", "wrong", "wrong"]}. Each question must test the SAME concept in the SAME programming language as its input line, but be a DIFFERENT question (change the values, variable names or angle). choices[0] must be the only correct answer. Keep questions short and beginner-friendly.' },
+        { role: "user", content: lines },
+      ],
+    }),
+  });
+  const data = await res.json();
+  let text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
+  text = text.replace(/```[a-z]*\n?/g, "").replace(/```/g, "").trim();
+  const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
+  const out = [];
+  arr.forEach((item) => {
+    const srcIdx = Number(item.src);
+    const src = list[srcIdx];
+    if (!src || !item.q || !Array.isArray(item.choices) || item.choices.length < 3) return;
+    out.push({
+      ex: {
+        t: "mc", gen: true,
+        srcKey: mistakeKey(src.course.id, src.ex),
+        q: String(item.q),
+        ...(item.code && item.code !== "null" ? { code: String(item.code) } : {}),
+        choices: item.choices.map(String).slice(0, 4),
+        a: 0,
+      },
+      course: src.course,
+    });
+  });
+  return out;
+}
+
+let targetLoading = false;
+async function renderTarget() {
   const spots = weakSpots();
-  $("targetCount").textContent = spots.length
-    ? `${spots.length} weak spot${spots.length === 1 ? "" : "s"} — answer them right to clear them`
-    : "Built from your mistakes";
   $("analysisPanel").classList.add("hidden");
   const feed = $("targetFeed");
-  feed.innerHTML = "";
   if (!spots.length) {
+    $("targetCount").textContent = "AI practice built from your mistakes";
     feed.innerHTML = `
       <div class="target-empty">
         <div class="result-emoji">🏖️</div>
         <h3>No weak spots!</h3>
-        <p>Every question you miss in lessons or practice lands here so you can crush it on the rematch.</p>
+        <p>When you miss questions in lessons or practice, the AI will write fresh new questions here that target exactly what tripped you up.</p>
       </div>`;
     return;
   }
-  spots.forEach(({ ex, course }) => feed.appendChild(buildFeedCard(ex, course)));
+  if (targetLoading) return;
+  targetLoading = true;
+  $("targetCount").textContent = `${spots.length} weak spot${spots.length === 1 ? "" : "s"} found`;
+  feed.innerHTML = `
+    <div class="target-empty">
+      <div class="result-emoji">🤖</div>
+      <h3>Writing your questions…</h3>
+      <p>The AI is creating brand-new questions that target exactly what you've been getting wrong.</p>
+    </div>`;
+  let cards = [];
+  try {
+    if (typeof AI_FEEDBACK === "undefined" || !AI_FEEDBACK || !AI_FEEDBACK.key) throw new Error("no ai");
+    cards = await aiGenerateQuestions(spots);
+  } catch (e) { /* fall back to replaying the originals below */ }
+  feed.innerHTML = "";
+  if (cards.length) {
+    $("targetCount").textContent = `${cards.length} fresh AI questions — beat them to clear your weak spots`;
+    cards.forEach(({ ex, course }) => feed.appendChild(buildFeedCard(ex, course)));
+  } else {
+    $("targetCount").textContent = "AI unavailable — replaying your missed questions instead";
+    spots.forEach(({ ex, course }) => feed.appendChild(buildFeedCard(ex, course)));
+  }
+  targetLoading = false;
 }
 
 $("analyzeBtn").addEventListener("click", async () => {
