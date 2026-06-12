@@ -392,8 +392,11 @@ function initAuth() {
           ? new firebase.auth.OAuthProvider("apple.com")
           : new firebase.auth.GoogleAuthProvider();
         fbAuth.signInWithPopup(provider).catch((err) => {
-          alert(`${method} sign-in failed: ${err.message}` +
-            (method === "Apple" ? "\n\nNote: Apple sign-in also needs an Apple Developer account configured in Firebase." : ""));
+          if (method === "Apple") {
+            alert("Apple sign-in isn't available yet 🍎\n\nApple requires a paid Apple Developer account ($99/yr) before any website can offer it — that's an Apple rule, not ours.\n\nUse Continue with Google or Sign up with email instead — they're just as good, and your progress syncs the same way!");
+          } else if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+            alert(`${method} sign-in failed: ${err.message}`);
+          }
         });
       } else {
         const name = prompt(`What should we call you? (${method} sign-in is simulated until Firebase is configured — see firebase-config.js. Everything stays on this device.)`, "Coder");
