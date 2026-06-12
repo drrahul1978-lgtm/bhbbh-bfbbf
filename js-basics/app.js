@@ -1716,7 +1716,7 @@ async function explainPlayError(code, errText) {
         temperature: 0.3,
         max_tokens: 140,
         messages: [
-          { role: "system", content: "You are a friendly coding tutor. A beginner's code produced an error. In 1-2 short sentences: say what they were probably trying to do, what is actually wrong, and how to fix it. Plain text, no markdown, no greetings." },
+          { role: "system", content: "A beginner's code produced an error in a code playground. Reply in EXACTLY this format and nothing else:\nIf you were trying to <their goal, max 8 words>, try: <the single corrected line of code>\nUse the same programming language they wrote. Plain text only — no markdown, no backticks, no extra sentences." },
           { role: "user", content: `Language: ${langName}\nTheir code:\n${code.slice(0, 1500)}\n\nThe error:\n${errText.slice(0, 800)}` },
         ],
       }),
