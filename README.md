@@ -1,59 +1,60 @@
-# 🃏 GradeMyCard — AI Trading Card Grader
+# 💻 CodeDeck — Code Any Language in the Browser
 
-Upload a photo of a **Pokémon, football, baseball or basketball card** and get an
-instant, PSA-style AI condition estimate — centering, corners, edges & surface
-subgrades plus an overall 1–10 grade — powered by **Meta's Llama 4 vision model**.
+A free, zero-setup **online code editor & runner**. Write and execute
+**Python, JavaScript, TypeScript, C++, C, C#, Java, Go, Rust, Ruby, PHP,
+Kotlin, Swift and Bash** — straight from the web, no installs, no accounts.
 
 **Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/
 
 ## How it works
 
-1. Open the site — it works out of the box using the site's built-in shared
-   Groq key (quota is shared by all visitors, so be considerate).
-2. Optional: use your own key instead via **⚙️ API Settings** — **Groq** is
-   recommended (free tier, no credit card):
-   create one at [console.groq.com/keys](https://console.groq.com/keys).
-   Your key is stored **only in your browser's localStorage** and sent directly
-   to the AI provider — there is no backend.
-3. Upload (or drag-drop / paste) a photo of your card and hit **Grade my card**.
+1. Open the site and pick a language from the dropdown.
+2. Write your code in the editor (powered by **Monaco**, the same editor
+   that runs inside VS Code — full syntax highlighting and autocomplete).
+3. Add anything your program reads from **stdin** in the input box (optional).
+4. Hit **▶ Run** (or press **Ctrl/Cmd + Enter**) and see the output instantly.
 
-The Llama 4 Scout vision model inspects the photo and returns subgrades for
-centering, corners, edges and surface, an overall grade with a PSA-style label
-(Gem Mint → Poor), and grader's notes about specific flaws it spotted.
+- **JavaScript** runs natively, right in your browser.
+- **Every other language** is compiled and executed by the free public
+  [Piston](https://github.com/engineer-man/piston) API — there is no backend
+  and no API key. Your code is sent directly to the Piston endpoint when you
+  press Run, and the latest available runtime version is selected for you.
 
-### Supported providers
+## Features
 
-| Provider   | Default model                              | Get a key |
-|------------|--------------------------------------------|-----------|
-| Groq       | `meta-llama/llama-4-scout-17b-16e-instruct`| [console.groq.com/keys](https://console.groq.com/keys) |
-| OpenRouter | `meta-llama/llama-4-scout`                 | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| Together   | `meta-llama/Llama-4-Scout-17B-16E-Instruct`| [api.together.ai](https://api.together.ai/settings/api-keys) |
+- 🌍 14 languages out of the box, easily extendable (see `LANGUAGES` in `app.js`).
+- 🎨 VS Code's Monaco editor with per-language syntax highlighting.
+- ⌨️ `Ctrl/Cmd + Enter` to run.
+- 📥 Standard input (stdin) support for interactive-style programs.
+- 🔗 **Share** button copies a link that encodes your language + code so you
+  can hand someone a working snippet.
+- ↔️ Draggable divider to resize the editor vs. the output panel.
+- 📱 Responsive layout that stacks on mobile.
 
-Any OpenAI-compatible vision model name can be typed into the model field.
+## Adding a language
 
-### Sharing with friends & family (magic link)
+Each entry in the `LANGUAGES` array in `app.js` describes one language:
 
-You can hand someone a pre-configured link so they don't need their own key:
-
+```js
+{
+  id: "go", label: "Go", monaco: "go",
+  piston: ["go", "golang"],   // candidate Piston names (first match wins)
+  file: "main.go",             // filename Piston compiles/runs
+  sample: "package main\n..."  // starter snippet
+}
 ```
-https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/#key=YOUR_API_KEY
-```
 
-The key is saved into their browser and instantly removed from the address bar.
-⚠️ Only share this link privately — anyone who has it can use your key. Never
-commit an API key to this (public) repository: GitHub secret scanning will
-revoke it and scrapers will abuse it.
+Anything in [Piston's runtime list](https://emkc.org/api/v2/piston/runtimes)
+can be wired up the same way.
 
-## Tips for better grades
+## Notes & limits
 
-- Use bright, even lighting (no glare on the card surface).
-- Shoot straight-on so all four borders are visible.
-- Fill the frame with the card and keep it in sharp focus.
-
-## Disclaimer
-
-This is an AI **estimate** from a single photo — for fun and rough triage only.
-It is not a professional grade. For official grading use PSA, BGS, SGC or CGC.
+- The free Piston API is shared and **rate-limited** — if you run many programs
+  quickly you may briefly get a "rate limited" message; just wait a few seconds.
+- Programs run in Piston's sandbox with limited CPU time and memory, so it's
+  meant for learning, snippets and small programs — not heavy workloads.
+- JavaScript runs in your own browser tab, so be mindful that infinite loops
+  will hang the page.
 
 ## Development
 
