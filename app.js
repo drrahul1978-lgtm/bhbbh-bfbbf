@@ -590,6 +590,11 @@ function initEditor(value, lang) {
       scrollBeyondLastLine: false,
       tabSize: 4,
       padding: { top: 12 },
+      // Don't auto-insert the closing bracket/quote when you type an opening one.
+      autoClosingBrackets: "never",
+      autoClosingQuotes: "never",
+      autoClosingOvertype: "never",
+      autoSurround: "never",
     });
     // Ctrl/Cmd+Enter to run
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
