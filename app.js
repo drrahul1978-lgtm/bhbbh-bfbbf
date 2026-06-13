@@ -101,9 +101,6 @@ const LANGUAGES = [
 const $ = (id) => document.getElementById(id);
 const languageSelect = $("languageSelect");
 const runBtn = $("runBtn");
-const resetBtn = $("resetBtn");
-const shareBtn = $("shareBtn");
-const clearBtn = $("clearBtn");
 const stdinEl = $("stdin");
 const outputEl = $("output");
 const statusBar = $("statusBar");
@@ -417,10 +414,6 @@ function getPyodide() {
 }
 
 async function runPython(code, stdin, t0) {
-  if (!pyodideLoaded) {
-    setStatus("Loading the Python runtime once… future runs are instant.");
-    writeOutput([["out-meta", "⏳ Loading the in-browser Python runtime…"]]);
-  }
   const py = await getPyodide();
   const startedAt = performance.now();
   const out = [];
@@ -471,10 +464,6 @@ function rubyStr(s) {
 }
 
 async function runRuby(code, stdin, t0) {
-  if (!rubyLoaded) {
-    setStatus("Loading the Ruby runtime once… future runs are instant.");
-    writeOutput([["out-meta", "⏳ Loading the in-browser Ruby runtime…"]]);
-  }
   let vm;
   try { vm = await getRuby(); }
   catch { return fallbackToPiston(code, stdin, t0, "Ruby"); }
@@ -529,10 +518,6 @@ function getPhp() {
 async function runPhp(code, stdin, t0) {
   // Local php-wasm stdin support is unreliable; route those runs to Piston.
   if (stdin && stdin.trim()) return fallbackToPiston(code, stdin, t0, "PHP");
-  if (!phpLoaded) {
-    setStatus("Loading the PHP runtime once… future runs are instant.");
-    writeOutput([["out-meta", "⏳ Loading the in-browser PHP runtime…"]]);
-  }
   let php;
   try { php = await getPhp(); }
   catch { return fallbackToPiston(code, stdin, t0, "PHP"); }
@@ -578,8 +563,8 @@ async function runViaPiston(code, stdin, t0) {
     return;
   }
 
-  setStatus(`Compiling & running ${currentLang.label} (${rt.language} ${rt.version})…`);
-  writeOutput([["out-meta", "⏳ Sending to Piston…"]]);
+  setStatus("Running…");
+  writeOutput([["out-meta", "Running…"]]);
 
   const res = await fetch(`${PISTON}/execute`, {
     method: "POST",
@@ -728,10 +713,8 @@ async function loadRuntimes() {
     const res = await fetch(`${PISTON}/runtimes`);
     runtimes = await res.json();
     updateRuntimeBadge();
-    setStatus("Runtimes loaded — ready to run.");
   } catch {
-    runtimeBadge.textContent = "runtimes offline";
-    setStatus("Couldn't reach the Piston API — JavaScript still runs locally.");
+    // Piston unreachable — local languages still run.
   }
 }
 
@@ -769,9 +752,6 @@ function boot() {
 
   languageSelect.addEventListener("change", (e) => selectLanguage(e.target.value));
   runBtn.addEventListener("click", runCode);
-  resetBtn.addEventListener("click", resetCode);
-  shareBtn.addEventListener("click", shareCode);
-  clearBtn.addEventListener("click", clearOutput);
   document.querySelectorAll(".web-tab").forEach((btn) =>
     btn.addEventListener("click", () => switchWebPart(btn.dataset.part)));
 

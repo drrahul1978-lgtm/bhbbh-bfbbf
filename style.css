@@ -5,8 +5,7 @@
   --border: #2a3140;
   --text: #e6edf3;
   --text-dim: #8b949e;
-  --accent: #6ea8fe;
-  --accent-2: #9d7bff;
+  --accent: #2f81f7;
   --green: #3fb950;
   --red: #f85149;
   --amber: #d29922;
@@ -49,12 +48,7 @@ body {
   letter-spacing: -0.01em;
 }
 .logo-icon { font-size: 1.3rem; }
-.accent {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+.accent { color: inherit; }
 
 .toolbar {
   display: flex;
@@ -93,7 +87,7 @@ button:active { transform: translateY(1px); }
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--green);
   color: #0b1020;
   font-weight: 700;
   border: none;
@@ -167,11 +161,7 @@ button:active { transform: translateY(1px); }
   border-bottom: 1px solid var(--border);
 }
 .file-name { display: none; }
-.runtime-badge {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--text-dim);
-}
+.runtime-badge { display: none; }
 .hint { font-size: 0.72rem; }
 
 .web-tabs {
@@ -189,9 +179,9 @@ button:active { transform: translateY(1px); }
 }
 .web-tab:hover { color: var(--text); }
 .web-tab.active {
-  color: #0b1020;
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--text);
+  background: var(--bg-elev-2);
+  border-color: var(--text-dim);
 }
 
 .editor { flex: 1; min-height: 0; }

@@ -26,8 +26,6 @@
       <button id="runBtn" class="primary-btn" title="Run code (Ctrl+Enter)">
         <span class="run-icon">&#9654;</span> Run
       </button>
-      <button id="resetBtn" class="ghost-btn icon-btn" title="Reset to the starter snippet" aria-label="Reset">&#8634;</button>
-      <button id="shareBtn" class="ghost-btn icon-btn" title="Copy a shareable link" aria-label="Share">&#128279;</button>
     </div>
   </header>
 
@@ -58,9 +56,8 @@
       <div class="io-block io-output">
         <div class="pane-head">
           <span id="outputLabel">Output</span>
-          <button id="clearBtn" class="text-btn">clear</button>
         </div>
-        <pre id="output" class="output"><span class="output-placeholder">Pick a language, write some code, and hit <strong>Run</strong> ▶</span></pre>
+        <pre id="output" class="output"></pre>
         <iframe id="preview" class="preview hidden" title="HTML preview" sandbox="allow-scripts allow-modals allow-forms"></iframe>
       </div>
     </section>
