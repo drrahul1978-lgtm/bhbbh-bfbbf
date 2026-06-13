@@ -44,7 +44,7 @@
     <div class="divider" id="divider" title="Drag to resize"></div>
 
     <section class="pane io-pane">
-      <div class="io-block">
+      <div class="io-block" id="stdinBlock">
         <div class="pane-head">
           <span>Input (stdin)</span>
           <span class="hint">optional — what your program reads</span>
@@ -54,10 +54,11 @@
 
       <div class="io-block io-output">
         <div class="pane-head">
-          <span>Output</span>
+          <span id="outputLabel">Output</span>
           <button id="clearBtn" class="text-btn">clear</button>
         </div>
         <pre id="output" class="output"><span class="output-placeholder">Pick a language, write some code, and hit <strong>Run</strong> ▶</span></pre>
+        <iframe id="preview" class="preview hidden" title="HTML preview" sandbox="allow-scripts allow-modals allow-forms"></iframe>
       </div>
     </section>
   </main>

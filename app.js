@@ -26,6 +26,11 @@ const LANGUAGES = [
     sample: `// JavaScript runs natively in your browser.\nconsole.log("Hello from JavaScript!");\n\nconst squares = [1, 2, 3, 4, 5].map(n => n * n);\nconsole.log("Squares:", squares);\n`
   },
   {
+    id: "html", label: "HTML (live preview)", monaco: "html",
+    piston: null, file: "index.html",
+    sample: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <style>\n    body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }\n    h1   { color: #6ea8fe; }\n    button { padding: .6rem 1.1rem; font-size: 1rem; border-radius: 8px;\n             border: none; background: #6ea8fe; color: #0b1020; cursor: pointer; }\n  </style>\n</head>\n<body>\n  <h1>Hello, HTML! \u{1F44B}</h1>\n  <p>Edit the code on the left and watch it update live.</p>\n  <button onclick="msg.textContent = 'You clicked! \u{1F389}'">Click me</button>\n  <p id="msg"></p>\n\n  <script>\n    console.log("Inline JavaScript runs in the preview too.");\n  <\/script>\n</body>\n</html>\n`
+  },
+  {
     id: "typescript", label: "TypeScript", monaco: "typescript",
     piston: ["typescript", "ts"], file: "main.ts",
     sample: `// TypeScript\nfunction greet(name: string): string {\n  return \`Hello, \${name}!\`;\n}\nconsole.log(greet("TypeScript"));\n`
@@ -123,6 +128,23 @@ function writeOutput(parts) {
 }
 function setStatus(msg) { statusBar.textContent = msg; }
 
+// HTML: render the code as a live preview inside a sandboxed iframe.
+function renderHtml(code) {
+  const iframe = $("preview");
+  iframe.srcdoc = code;
+  setStatus("Live preview updated.");
+}
+
+// Swap the IO pane between text output (most languages) and the HTML preview.
+function updateIoMode() {
+  const isHtml = currentLang.id === "html";
+  $("preview").classList.toggle("hidden", !isHtml);
+  $("output").classList.toggle("hidden", isHtml);
+  $("stdinBlock").classList.toggle("hidden", isHtml);
+  $("outputLabel").textContent = isHtml ? "Preview" : "Output";
+  if (isHtml && editor) renderHtml(editor.getValue());
+}
+
 // ----- Language selection & editor wiring -----
 function buildLanguageOptions() {
   languageSelect.innerHTML = "";
@@ -146,6 +168,10 @@ function pistonRuntimeFor(lang) {
 }
 
 function updateRuntimeBadge() {
+  if (currentLang.id === "html") {
+    runtimeBadge.textContent = "HTML · live preview";
+    return;
+  }
   if (currentLang.id === "javascript") {
     runtimeBadge.textContent = "browser engine";
     return;
@@ -181,6 +207,7 @@ function selectLanguage(id, { useSampleIfEmpty = true } = {}) {
     editor.setValue(value);
   }
   updateRuntimeBadge();
+  updateIoMode();
 }
 
 // ----- Running code -----
@@ -196,7 +223,9 @@ async function runCode() {
   const t0 = performance.now();
 
   try {
-    if (currentLang.id === "javascript") {
+    if (currentLang.id === "html") {
+      renderHtml(code);
+    } else if (currentLang.id === "javascript") {
       runJavaScript(code);
     } else if (currentLang.id === "typescript") {
       await runTypeScript(code);
@@ -454,7 +483,15 @@ function initEditor(initial) {
     });
     // Ctrl/Cmd+Enter to run
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
+    // Live HTML preview as you type (debounced).
+    let htmlTimer = null;
+    editor.onDidChangeModelContent(() => {
+      if (currentLang.id !== "html") return;
+      clearTimeout(htmlTimer);
+      htmlTimer = setTimeout(() => renderHtml(editor.getValue()), 250);
+    });
     updateRuntimeBadge();
+    updateIoMode();
     setStatus("Editor ready.");
   });
 }
