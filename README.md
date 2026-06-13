@@ -15,6 +15,10 @@ Kotlin, Swift and Bash** — straight from the web, no installs, no accounts.
 4. Hit **▶ Run** (or press **Ctrl/Cmd + Enter**) and see the output instantly.
 
 - **JavaScript** runs natively, right in your browser.
+- **Python** runs **fully in your browser** via [Pyodide](https://pyodide.org)
+  (CPython compiled to WebAssembly). The runtime downloads once on your first
+  Python run, then every run after that is **instant and unlimited** — no
+  network round-trip and no rate limits. `input()` reads from the stdin box.
 - **Every other language** is compiled and executed by the free public
   [Piston](https://github.com/engineer-man/piston) API — there is no backend
   and no API key. Your code is sent directly to the Piston endpoint when you
@@ -49,8 +53,10 @@ can be wired up the same way.
 
 ## Notes & limits
 
-- The free Piston API is shared and **rate-limited** — if you run many programs
-  quickly you may briefly get a "rate limited" message; just wait a few seconds.
+- **Python and JavaScript run locally with no rate limits** — run them as much
+  as you like. The Piston-backed languages (C++, C#, Java, etc.) use a shared,
+  **rate-limited** free API, so running many of those quickly may briefly show
+  a "rate limited" message; just wait a few seconds.
 - Programs run in Piston's sandbox with limited CPU time and memory, so it's
   meant for learning, snippets and small programs — not heavy workloads.
 - JavaScript runs in your own browser tab, so be mindful that infinite loops
