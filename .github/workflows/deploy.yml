@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/website-idea-ai-uml90j
+      - claude/web-code-editor-multiplatform-umhvt5
   workflow_dispatch:
 
 permissions:

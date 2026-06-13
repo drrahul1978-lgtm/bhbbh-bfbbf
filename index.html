@@ -3,139 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GradeMyCard — AI Trading Card Grader</title>
-  <meta name="description" content="Upload a photo of your Pokémon, football, baseball or basketball card and get an instant AI-powered condition grade." />
+  <title>CodeDeck — Code Any Language in the Browser</title>
+  <meta name="description" content="A free online multi-language code editor & runner. Write and run Python, JavaScript, C++, C, C#, Java, Go, Rust and more — straight from the web, no setup." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128187;</text></svg>" />
 </head>
 <body>
-  <div class="bg-glow"></div>
-
   <header class="site-header">
     <div class="logo">
-      <span class="logo-icon">🃏</span>
-      <span class="logo-text">Grade<span class="accent">My</span>Card</span>
+      <span class="logo-icon">&#128187;</span>
+      <span class="logo-text">Code<span class="accent">Deck</span></span>
     </div>
-    <button id="settingsBtn" class="ghost-btn" title="API settings">⚙️ API Settings</button>
+
+    <div class="toolbar">
+      <label class="lang-picker">
+        <span class="lang-picker-label">Language</span>
+        <select id="languageSelect" aria-label="Choose a language"></select>
+      </label>
+
+      <button id="runBtn" class="primary-btn" title="Run code (Ctrl+Enter)">
+        <span class="run-icon">&#9654;</span> Run
+      </button>
+      <button id="resetBtn" class="ghost-btn" title="Reset to the starter snippet">&#8634; Reset</button>
+      <button id="shareBtn" class="ghost-btn" title="Copy a shareable link to this code">&#128279; Share</button>
+    </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <h1>AI-powered card grading,<br /><span class="accent">in seconds.</span></h1>
-      <p class="subtitle">
-        Snap a photo of your Pokémon, football, baseball or basketball card and get an
-        instant PSA-style condition estimate — centering, corners, edges &amp; surface —
-        powered by Meta's Llama&nbsp;4 vision model.
-      </p>
+  <main class="workspace">
+    <section class="pane editor-pane">
+      <div class="pane-head">
+        <span id="fileName" class="file-name">main</span>
+        <span id="runtimeBadge" class="runtime-badge">loading runtimes…</span>
+      </div>
+      <div id="editor" class="editor"></div>
     </section>
 
-    <!-- Settings panel -->
-    <section id="settingsPanel" class="card panel settings-panel hidden">
-      <h2>⚙️ API Settings</h2>
-      <p class="hint">
-        This site runs entirely in your browser. Your API key is stored only in this
-        browser (localStorage) and is sent directly to the AI provider — never to any
-        other server.
-      </p>
-      <div class="field-row">
-        <label for="provider">Provider</label>
-        <select id="provider">
-          <option value="groq">Groq (free tier — recommended)</option>
-          <option value="openrouter">OpenRouter</option>
-          <option value="together">Together AI</option>
-        </select>
-      </div>
-      <div class="field-row">
-        <label for="model">Model</label>
-        <input type="text" id="model" spellcheck="false" />
-      </div>
-      <div class="field-row">
-        <label for="apiKey">API key</label>
-        <input type="password" id="apiKey" placeholder="Paste your API key…" spellcheck="false" autocomplete="off" />
-      </div>
-      <p class="hint" id="keyHelp"></p>
-      <div class="field-row right">
-        <button id="saveSettings" class="primary-btn small">Save settings</button>
-      </div>
-    </section>
+    <div class="divider" id="divider" title="Drag to resize"></div>
 
-    <!-- Upload area -->
-    <section class="card panel">
-      <h2>1️⃣ Upload your card</h2>
-      <div id="dropZone" class="drop-zone" tabindex="0">
-        <input type="file" id="fileInput" accept="image/*" hidden />
-        <div id="dropPlaceholder">
-          <div class="drop-icon">📸</div>
-          <p><strong>Click, drag &amp; drop, or paste</strong> a photo of the card's front</p>
-          <p class="hint">Tip: bright, even lighting and a straight-on angle give the best grades</p>
+    <section class="pane io-pane">
+      <div class="io-block">
+        <div class="pane-head">
+          <span>Input (stdin)</span>
+          <span class="hint">optional — what your program reads</span>
         </div>
-        <img id="preview" class="preview hidden" alt="Card preview" />
-      </div>
-      <div class="upload-actions hidden" id="uploadActions">
-        <button id="changePhoto" class="ghost-btn">🔄 Change photo</button>
-      </div>
-    </section>
-
-    <!-- Grade button -->
-    <section class="grade-action">
-      <button id="gradeBtn" class="primary-btn" disabled>🔍 Grade my card</button>
-      <p id="statusMsg" class="status-msg"></p>
-    </section>
-
-    <!-- Results -->
-    <section id="results" class="card panel results hidden">
-      <div class="results-header">
-        <div>
-          <h2 id="cardName">Card</h2>
-          <p id="cardMeta" class="card-meta"></p>
-        </div>
-        <div class="grade-badge">
-          <div class="grade-number" id="gradeNumber">–</div>
-          <div class="grade-label" id="gradeLabel">GRADE</div>
-        </div>
+        <textarea id="stdin" class="stdin" spellcheck="false" placeholder="Type any input your program should read here…"></textarea>
       </div>
 
-      <div class="subgrades">
-        <div class="subgrade" data-key="centering">
-          <div class="subgrade-top"><span>📐 Centering</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
+      <div class="io-block io-output">
+        <div class="pane-head">
+          <span>Output</span>
+          <button id="clearBtn" class="text-btn">clear</button>
         </div>
-        <div class="subgrade" data-key="corners">
-          <div class="subgrade-top"><span>📍 Corners</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-        <div class="subgrade" data-key="edges">
-          <div class="subgrade-top"><span>📏 Edges</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-        <div class="subgrade" data-key="surface">
-          <div class="subgrade-top"><span>✨ Surface</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-      </div>
-
-      <div class="observations">
-        <h3>👁️ Grader's notes</h3>
-        <ul id="observationList"></ul>
-      </div>
-
-      <p class="confidence">AI confidence: <span id="confidenceValue">–</span></p>
-
-      <div class="disclaimer">
-        ⚠️ This is an AI <em>estimate</em> from a single photo, for fun and rough triage only.
-        It is not a professional grade — lighting, focus and angle heavily affect results.
-        For official grading, use PSA, BGS, SGC or CGC.
+        <pre id="output" class="output"><span class="output-placeholder">Pick a language, write some code, and hit <strong>Run</strong> ▶</span></pre>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>Built with 🃏 + 🦙 Llama 4 vision · Your photos &amp; API key never leave your browser except to call the AI provider directly.</p>
+    <span id="statusBar" class="status-bar">Ready.</span>
+    <span class="footer-credit">
+      Runs in your browser &middot; compiled languages execute via the free
+      <a href="https://github.com/engineer-man/piston" target="_blank" rel="noopener">Piston</a> API
+    </span>
   </footer>
 
+  <!-- Monaco editor -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
