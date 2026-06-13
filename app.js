@@ -114,12 +114,7 @@ const codeCache = {};        // remember per-language edits during the session
 
 // "Web" mode keeps three separate buffers combined into one live preview.
 let currentWebPart = "html";
-const webFiles = {
-  html: `<h1>Hello, Web! \u{1F44B}</h1>\n<p>Edit the HTML, CSS and JS tabs above — the preview updates live.</p>\n<button id="go">Click me</button>\n<p id="out"></p>\n`,
-  css: `body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; color: #222; }\nh1 { color: #6ea8fe; }\nbutton {\n  padding: .6rem 1.1rem; font-size: 1rem; cursor: pointer;\n  border: none; border-radius: 8px; background: #6ea8fe; color: #0b1020;\n}\n`,
-  js: `document.getElementById("go").addEventListener("click", () => {\n  document.getElementById("out").textContent = "You clicked! \u{1F389}";\n});\n`,
-};
-const DEFAULT_WEB = { ...webFiles };  // pristine copies for the Reset button
+const webFiles = { html: "", css: "", js: "" };
 
 let pyodideReady = null;     // lazy-loaded Pyodide (in-browser Python) promise
 let pyodideLoaded = false;   // true once Pyodide has finished downloading
@@ -262,7 +257,7 @@ function updateRuntimeBadge() {
   runtimeBadge.textContent = rt ? `${rt.language} ${rt.version}` : "runtime unavailable";
 }
 
-function selectLanguage(id, { useSampleIfEmpty = true } = {}) {
+function selectLanguage(id) {
   // stash the code we're leaving
   if (editor && currentLang) {
     if (currentLang.id === "web") webFiles[currentWebPart] = editor.getValue();
@@ -281,9 +276,8 @@ function selectLanguage(id, { useSampleIfEmpty = true } = {}) {
       editor.setValue(webFiles.html);
     } else {
       const cached = codeCache[currentLang.id];
-      const value = cached != null ? cached : (useSampleIfEmpty ? currentLang.sample : "");
       monaco.editor.setModelLanguage(editor.getModel(), currentLang.monaco);
-      editor.setValue(value);
+      editor.setValue(cached != null ? cached : "");
     }
   }
   updateRuntimeBadge();
@@ -611,23 +605,7 @@ async function runViaPiston(code, stdin, t0) {
   setStatus("Done.");
 }
 
-// ----- Share / reset -----
-function shareCode() {
-  let code;
-  if (currentLang.id === "web") {
-    if (editor) webFiles[currentWebPart] = editor.getValue();
-    code = JSON.stringify(webFiles);
-  } else {
-    code = editor ? editor.getValue() : "";
-  }
-  const payload = encodeURIComponent(btoa(unescape(encodeURIComponent(code))));
-  const url = `${location.origin}${location.pathname}#lang=${currentLang.id}&code=${payload}`;
-  navigator.clipboard.writeText(url).then(
-    () => setStatus("Shareable link copied to clipboard ✓"),
-    () => setStatus("Couldn't copy — here's the link: " + url)
-  );
-}
-
+// A shared link (#lang=…&code=…) can still pre-fill the editor when opened.
 function loadFromHash() {
   if (!location.hash) return null;
   const params = new URLSearchParams(location.hash.slice(1));
@@ -639,19 +617,6 @@ function loadFromHash() {
     try { decoded = decodeURIComponent(escape(atob(decodeURIComponent(code)))); } catch { decoded = null; }
   }
   return { lang, code: decoded };
-}
-
-function resetCode() {
-  if (currentLang.id === "web") {
-    webFiles[currentWebPart] = DEFAULT_WEB[currentWebPart];
-    if (editor) editor.setValue(webFiles[currentWebPart]);
-    renderWeb();
-    setStatus(`Reset the ${currentWebPart.toUpperCase()} tab to its starter snippet.`);
-    return;
-  }
-  delete codeCache[currentLang.id];
-  if (editor) editor.setValue(currentLang.sample);
-  setStatus(`Reset ${currentLang.label} to the starter snippet.`);
 }
 
 // ----- Resizable divider -----
@@ -739,7 +704,7 @@ function boot() {
     initialValue = webFiles.html;
     initialLang = "html";
   } else {
-    initialValue = fromHash && fromHash.code != null ? fromHash.code : currentLang.sample;
+    initialValue = fromHash && fromHash.code != null ? fromHash.code : "";
     initialLang = currentLang.monaco;
   }
 
