@@ -25,6 +25,9 @@ Kotlin, Swift and Bash** — straight from the web, no installs, no accounts.
 - **HTML** renders as a **live preview** that updates as you type, in a
   sandboxed iframe — inline CSS and JavaScript work too. Fully local, instant,
   unlimited.
+- **Web (HTML + CSS + JS)** is a CodePen-style mode with three tabs — separate
+  HTML, CSS and JavaScript buffers that are combined into one **live preview**
+  that updates as you type. The Share button packs all three into the link.
 - **Ruby** and **PHP** also run **in your browser** via their official
   WebAssembly builds ([ruby.wasm](https://github.com/ruby/ruby.wasm) and
   [php-wasm](https://github.com/seanmorris/php-wasm)). They load once on first

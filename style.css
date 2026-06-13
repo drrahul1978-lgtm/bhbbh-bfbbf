@@ -177,6 +177,26 @@ button:active { transform: translateY(1px); }
 }
 .hint { font-size: 0.72rem; }
 
+.web-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+.web-tab {
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+}
+.web-tab:hover { color: var(--text); }
+.web-tab.active {
+  color: #0b1020;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .editor { flex: 1; min-height: 0; }
 
 /* ---------- IO ---------- */
