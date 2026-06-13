@@ -154,6 +154,10 @@ function updateRuntimeBadge() {
     runtimeBadge.textContent = pyodideReady ? "Python · in-browser" : "Python · in-browser (loads on first run)";
     return;
   }
+  if (currentLang.id === "typescript") {
+    runtimeBadge.textContent = tsReady ? "TypeScript · in-browser" : "TypeScript · in-browser (loads on first run)";
+    return;
+  }
   if (!runtimes.length) {
     runtimeBadge.textContent = "loading runtimes…";
     return;
@@ -194,6 +198,8 @@ async function runCode() {
   try {
     if (currentLang.id === "javascript") {
       runJavaScript(code);
+    } else if (currentLang.id === "typescript") {
+      await runTypeScript(code);
     } else if (currentLang.id === "python") {
       await runPython(code, stdin, t0);
     } else {
@@ -208,8 +214,8 @@ async function runCode() {
 }
 
 // JavaScript: capture console output and run in the page (sandboxed-ish via Function).
-function runJavaScript(code) {
-  setStatus("Running JavaScript in your browser…");
+function runJavaScript(code, label = "JavaScript") {
+  setStatus(`Running ${label} in your browser…`);
   const logs = [];
   const fmt = (args) => args.map((a) => {
     if (typeof a === "string") return a;
@@ -234,9 +240,49 @@ function runJavaScript(code) {
   }
   const ms = Math.round(performance.now() - t0);
   if (!logs.length) logs.push(["out-meta", "(no output)\n"]);
-  logs.push(["out-ok", `\n✓ finished in ${ms} ms (browser)`]);
+  logs.push(["out-ok", `\n✓ finished in ${ms} ms (${label} · browser, no limits)`]);
   writeOutput(logs);
   setStatus("Done.");
+}
+
+// TypeScript: load the TS compiler once, transpile to JS, then run it locally.
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("Failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+
+let tsReady = null;
+function getTypeScript() {
+  if (!tsReady) {
+    setStatus("Loading the TypeScript compiler once… future runs are instant.");
+    writeOutput([["out-meta", "⏳ First TypeScript run: downloading the compiler once…"]]);
+    runtimeBadge.textContent = "TypeScript · loading…";
+    tsReady = loadScript("https://cdn.jsdelivr.net/npm/typescript@5.4.5/lib/typescript.js")
+      .then(() => { runtimeBadge.textContent = "TypeScript · in-browser"; return window.ts; })
+      .catch((err) => { tsReady = null; throw err; });
+  }
+  return tsReady;
+}
+
+async function runTypeScript(code) {
+  const ts = await getTypeScript();
+  let js;
+  try {
+    js = ts.transpile(code, {
+      target: ts.ScriptTarget.ES2020,
+      module: ts.ModuleKind.None,
+    });
+  } catch (err) {
+    writeOutput([["out-stderr", "TypeScript compile error: " + (err && err.message ? err.message : String(err))]]);
+    setStatus("Compile failed.");
+    return;
+  }
+  runJavaScript(js, "TypeScript");
 }
 
 // Python runs locally in the browser via Pyodide (WebAssembly CPython).
