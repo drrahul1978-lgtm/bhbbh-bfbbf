@@ -26,6 +26,11 @@ const LANGUAGES = [
     sample: `// JavaScript runs natively in your browser.\nconsole.log("Hello from JavaScript!");\n\nconst squares = [1, 2, 3, 4, 5].map(n => n * n);\nconsole.log("Squares:", squares);\n`
   },
   {
+    id: "web", label: "Web (HTML + CSS + JS)", monaco: "html",
+    piston: null, file: "web",
+    sample: "",  // uses the separate webFiles buffers below
+  },
+  {
     id: "html", label: "HTML (live preview)", monaco: "html",
     piston: null, file: "index.html",
     sample: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <style>\n    body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }\n    h1   { color: #6ea8fe; }\n    button { padding: .6rem 1.1rem; font-size: 1rem; border-radius: 8px;\n             border: none; background: #6ea8fe; color: #0b1020; cursor: pointer; }\n  </style>\n</head>\n<body>\n  <h1>Hello, HTML! \u{1F44B}</h1>\n  <p>Edit the code on the left and watch it update live.</p>\n  <button onclick="msg.textContent = 'You clicked! \u{1F389}'">Click me</button>\n  <p id="msg"></p>\n\n  <script>\n    console.log("Inline JavaScript runs in the preview too.");\n  <\/script>\n</body>\n</html>\n`
@@ -109,6 +114,16 @@ let editor = null;          // Monaco editor instance
 let runtimes = [];          // resolved Piston runtimes
 let currentLang = LANGUAGES[0];
 const codeCache = {};        // remember per-language edits during the session
+
+// "Web" mode keeps three separate buffers combined into one live preview.
+let currentWebPart = "html";
+const webFiles = {
+  html: `<h1>Hello, Web! \u{1F44B}</h1>\n<p>Edit the HTML, CSS and JS tabs above — the preview updates live.</p>\n<button id="go">Click me</button>\n<p id="out"></p>\n`,
+  css: `body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; color: #222; }\nh1 { color: #6ea8fe; }\nbutton {\n  padding: .6rem 1.1rem; font-size: 1rem; cursor: pointer;\n  border: none; border-radius: 8px; background: #6ea8fe; color: #0b1020;\n}\n`,
+  js: `document.getElementById("go").addEventListener("click", () => {\n  document.getElementById("out").textContent = "You clicked! \u{1F389}";\n});\n`,
+};
+const DEFAULT_WEB = { ...webFiles };  // pristine copies for the Reset button
+
 let pyodideReady = null;     // lazy-loaded Pyodide (in-browser Python) promise
 let pyodideLoaded = false;   // true once Pyodide has finished downloading
 let rubyReady = null, rubyLoaded = false;   // ruby.wasm
@@ -138,14 +153,57 @@ function renderHtml(code) {
   setStatus("Live preview updated.");
 }
 
-// Swap the IO pane between text output (most languages) and the HTML preview.
+// Web mode: combine the three buffers into one document and preview it.
+function renderWeb() {
+  if (editor) webFiles[currentWebPart] = editor.getValue();
+  const doc =
+`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+${webFiles.css}
+</style>
+</head>
+<body>
+${webFiles.html}
+<script>
+${webFiles.js}
+<\/script>
+</body>
+</html>`;
+  $("preview").srcdoc = doc;
+  setStatus("Live preview updated.");
+}
+
+function setActiveWebTab() {
+  document.querySelectorAll(".web-tab").forEach((b) =>
+    b.classList.toggle("active", b.dataset.part === currentWebPart));
+}
+
+// Switch between the HTML / CSS / JS tabs without leaving Web mode.
+function switchWebPart(part) {
+  if (!editor || part === currentWebPart) return;
+  webFiles[currentWebPart] = editor.getValue();
+  currentWebPart = part;
+  setActiveWebTab();
+  const lang = part === "js" ? "javascript" : part; // html | css | javascript
+  monaco.editor.setModelLanguage(editor.getModel(), lang);
+  editor.setValue(webFiles[part]);
+  renderWeb();
+}
+
+// Swap the IO pane between text output and the live preview (HTML / Web modes).
 function updateIoMode() {
-  const isHtml = currentLang.id === "html";
-  $("preview").classList.toggle("hidden", !isHtml);
-  $("output").classList.toggle("hidden", isHtml);
-  $("stdinBlock").classList.toggle("hidden", isHtml);
-  $("outputLabel").textContent = isHtml ? "Preview" : "Output";
-  if (isHtml && editor) renderHtml(editor.getValue());
+  const isPreview = currentLang.id === "html" || currentLang.id === "web";
+  $("preview").classList.toggle("hidden", !isPreview);
+  $("output").classList.toggle("hidden", isPreview);
+  $("stdinBlock").classList.toggle("hidden", isPreview);
+  $("webTabs").classList.toggle("hidden", currentLang.id !== "web");
+  $("fileName").classList.toggle("hidden", currentLang.id === "web");
+  $("outputLabel").textContent = isPreview ? "Preview" : "Output";
+  if (currentLang.id === "html" && editor) renderHtml(editor.getValue());
+  if (currentLang.id === "web" && editor) renderWeb();
 }
 
 // ----- Language selection & editor wiring -----
@@ -173,6 +231,10 @@ function pistonRuntimeFor(lang) {
 function updateRuntimeBadge() {
   if (currentLang.id === "html") {
     runtimeBadge.textContent = "HTML · live preview";
+    return;
+  }
+  if (currentLang.id === "web") {
+    runtimeBadge.textContent = "Web · live preview";
     return;
   }
   if (currentLang.id === "javascript") {
@@ -205,17 +267,27 @@ function updateRuntimeBadge() {
 
 function selectLanguage(id, { useSampleIfEmpty = true } = {}) {
   // stash the code we're leaving
-  if (editor && currentLang) codeCache[currentLang.id] = editor.getValue();
+  if (editor && currentLang) {
+    if (currentLang.id === "web") webFiles[currentWebPart] = editor.getValue();
+    else codeCache[currentLang.id] = editor.getValue();
+  }
 
   currentLang = LANGUAGES.find((l) => l.id === id) || LANGUAGES[0];
   languageSelect.value = currentLang.id;
   fileNameEl.textContent = currentLang.file;
 
-  const cached = codeCache[currentLang.id];
-  const value = cached != null ? cached : (useSampleIfEmpty ? currentLang.sample : "");
   if (editor) {
-    monaco.editor.setModelLanguage(editor.getModel(), currentLang.monaco);
-    editor.setValue(value);
+    if (currentLang.id === "web") {
+      currentWebPart = "html";
+      setActiveWebTab();
+      monaco.editor.setModelLanguage(editor.getModel(), "html");
+      editor.setValue(webFiles.html);
+    } else {
+      const cached = codeCache[currentLang.id];
+      const value = cached != null ? cached : (useSampleIfEmpty ? currentLang.sample : "");
+      monaco.editor.setModelLanguage(editor.getModel(), currentLang.monaco);
+      editor.setValue(value);
+    }
   }
   updateRuntimeBadge();
   updateIoMode();
@@ -225,6 +297,11 @@ function selectLanguage(id, { useSampleIfEmpty = true } = {}) {
 async function runCode() {
   const code = editor ? editor.getValue() : "";
   const stdin = stdinEl.value;
+
+  // Preview modes are instant and may have empty buffers — handle up front.
+  if (currentLang.id === "web") { renderWeb(); return; }
+  if (currentLang.id === "html") { renderHtml(code); return; }
+
   if (!code.trim()) {
     writeOutput([["out-meta", "Nothing to run — the editor is empty."]]);
     return;
@@ -234,9 +311,7 @@ async function runCode() {
   const t0 = performance.now();
 
   try {
-    if (currentLang.id === "html") {
-      renderHtml(code);
-    } else if (currentLang.id === "javascript") {
+    if (currentLang.id === "javascript") {
       runJavaScript(code);
     } else if (currentLang.id === "typescript") {
       await runTypeScript(code);
@@ -553,7 +628,13 @@ async function runViaPiston(code, stdin, t0) {
 
 // ----- Share / reset -----
 function shareCode() {
-  const code = editor ? editor.getValue() : "";
+  let code;
+  if (currentLang.id === "web") {
+    if (editor) webFiles[currentWebPart] = editor.getValue();
+    code = JSON.stringify(webFiles);
+  } else {
+    code = editor ? editor.getValue() : "";
+  }
   const payload = encodeURIComponent(btoa(unescape(encodeURIComponent(code))));
   const url = `${location.origin}${location.pathname}#lang=${currentLang.id}&code=${payload}`;
   navigator.clipboard.writeText(url).then(
@@ -576,6 +657,13 @@ function loadFromHash() {
 }
 
 function resetCode() {
+  if (currentLang.id === "web") {
+    webFiles[currentWebPart] = DEFAULT_WEB[currentWebPart];
+    if (editor) editor.setValue(webFiles[currentWebPart]);
+    renderWeb();
+    setStatus(`Reset the ${currentWebPart.toUpperCase()} tab to its starter snippet.`);
+    return;
+  }
   delete codeCache[currentLang.id];
   if (editor) editor.setValue(currentLang.sample);
   setStatus(`Reset ${currentLang.label} to the starter snippet.`);
@@ -602,12 +690,12 @@ function setupDivider() {
 }
 
 // ----- Boot -----
-function initEditor(initial) {
+function initEditor(value, lang) {
   require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs" } });
   require(["vs/editor/editor.main"], () => {
     editor = monaco.editor.create($("editor"), {
-      value: initial.code != null ? initial.code : currentLang.sample,
-      language: currentLang.monaco,
+      value: value,
+      language: lang,
       theme: "vs-dark",
       fontFamily: '"JetBrains Mono", monospace',
       fontSize: 14,
@@ -619,12 +707,15 @@ function initEditor(initial) {
     });
     // Ctrl/Cmd+Enter to run
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
-    // Live HTML preview as you type (debounced).
-    let htmlTimer = null;
+    // Live preview as you type for HTML and Web modes (debounced).
+    let previewTimer = null;
     editor.onDidChangeModelContent(() => {
-      if (currentLang.id !== "html") return;
-      clearTimeout(htmlTimer);
-      htmlTimer = setTimeout(() => renderHtml(editor.getValue()), 250);
+      if (currentLang.id !== "html" && currentLang.id !== "web") return;
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(
+        () => (currentLang.id === "web" ? renderWeb() : renderHtml(editor.getValue())),
+        250
+      );
     });
     updateRuntimeBadge();
     updateIoMode();
@@ -653,8 +744,23 @@ function boot() {
   }
   languageSelect.value = currentLang.id;
   fileNameEl.textContent = currentLang.file;
+  $("webTabs").classList.toggle("hidden", currentLang.id !== "web");
 
-  initEditor(fromHash || {});
+  let initialValue, initialLang;
+  if (currentLang.id === "web") {
+    if (fromHash && fromHash.code) {
+      try { Object.assign(webFiles, JSON.parse(fromHash.code)); } catch {}
+    }
+    currentWebPart = "html";
+    setActiveWebTab();
+    initialValue = webFiles.html;
+    initialLang = "html";
+  } else {
+    initialValue = fromHash && fromHash.code != null ? fromHash.code : currentLang.sample;
+    initialLang = currentLang.monaco;
+  }
+
+  initEditor(initialValue, initialLang);
   loadRuntimes();
   setupDivider();
 
@@ -666,6 +772,8 @@ function boot() {
   resetBtn.addEventListener("click", resetCode);
   shareBtn.addEventListener("click", shareCode);
   clearBtn.addEventListener("click", clearOutput);
+  document.querySelectorAll(".web-tab").forEach((btn) =>
+    btn.addEventListener("click", () => switchWebPart(btn.dataset.part)));
 
   // global Ctrl/Cmd+Enter even when focus is in stdin
   document.addEventListener("keydown", (e) => {
