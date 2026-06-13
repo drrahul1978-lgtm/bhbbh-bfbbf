@@ -11,90 +11,26 @@ const PISTON = "https://emkc.org/api/v2/piston";
  *  - monaco:   the Monaco editor language id (for highlighting)
  *  - piston:   candidate Piston language names/aliases (first match wins)
  *  - file:     the filename Piston should compile/run
- *  - sample:   a "hello world" starter snippet
+ * The editor always starts empty — there are no starter snippets.
  * JavaScript is special-cased to run natively in the browser (piston: null).
  */
 const LANGUAGES = [
-  {
-    id: "python", label: "Python", monaco: "python",
-    piston: ["python", "python3"], file: "main.py",
-    sample: `# Python\nname = input("What's your name? ") or "world"\nprint(f"Hello, {name}!")\n\nfor i in range(1, 6):\n    print(i, i ** 2)\n`
-  },
-  {
-    id: "javascript", label: "JavaScript", monaco: "javascript",
-    piston: null, file: "main.js",
-    sample: `// JavaScript runs natively in your browser.\nconsole.log("Hello from JavaScript!");\n\nconst squares = [1, 2, 3, 4, 5].map(n => n * n);\nconsole.log("Squares:", squares);\n`
-  },
-  {
-    id: "web", label: "Web (HTML + CSS + JS)", monaco: "html",
-    piston: null, file: "web",
-    sample: "",  // uses the separate webFiles buffers below
-  },
-  {
-    id: "html", label: "HTML (live preview)", monaco: "html",
-    piston: null, file: "index.html",
-    sample: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <style>\n    body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }\n    h1   { color: #6ea8fe; }\n    button { padding: .6rem 1.1rem; font-size: 1rem; border-radius: 8px;\n             border: none; background: #6ea8fe; color: #0b1020; cursor: pointer; }\n  </style>\n</head>\n<body>\n  <h1>Hello, HTML! \u{1F44B}</h1>\n  <p>Edit the code on the left and watch it update live.</p>\n  <button onclick="msg.textContent = 'You clicked! \u{1F389}'">Click me</button>\n  <p id="msg"></p>\n\n  <script>\n    console.log("Inline JavaScript runs in the preview too.");\n  <\/script>\n</body>\n</html>\n`
-  },
-  {
-    id: "typescript", label: "TypeScript", monaco: "typescript",
-    piston: ["typescript", "ts"], file: "main.ts",
-    sample: `// TypeScript\nfunction greet(name: string): string {\n  return \`Hello, \${name}!\`;\n}\nconsole.log(greet("TypeScript"));\n`
-  },
-  {
-    id: "cpp", label: "C++", monaco: "cpp",
-    piston: ["c++", "cpp"], file: "main.cpp",
-    sample: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from C++!" << endl;\n    for (int i = 1; i <= 5; i++) cout << i * i << " ";\n    cout << endl;\n    return 0;\n}\n`
-  },
-  {
-    id: "c", label: "C", monaco: "c",
-    piston: ["c"], file: "main.c",
-    sample: `#include <stdio.h>\n\nint main(void) {\n    printf("Hello from C!\\n");\n    for (int i = 1; i <= 5; i++) printf("%d ", i * i);\n    printf("\\n");\n    return 0;\n}\n`
-  },
-  {
-    id: "csharp", label: "C#", monaco: "csharp",
-    piston: ["csharp", "c#", "csharp.net", "mono"], file: "main.cs",
-    sample: `using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello from C#!");\n        for (int i = 1; i <= 5; i++) Console.Write($"{i * i} ");\n        Console.WriteLine();\n    }\n}\n`
-  },
-  {
-    id: "java", label: "Java", monaco: "java",
-    piston: ["java"], file: "Main.java",
-    sample: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java!");\n        for (int i = 1; i <= 5; i++) System.out.print(i * i + " ");\n        System.out.println();\n    }\n}\n`
-  },
-  {
-    id: "go", label: "Go", monaco: "go",
-    piston: ["go", "golang"], file: "main.go",
-    sample: `package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello from Go!")\n    for i := 1; i <= 5; i++ {\n        fmt.Print(i*i, " ")\n    }\n    fmt.Println()\n}\n`
-  },
-  {
-    id: "rust", label: "Rust", monaco: "rust",
-    piston: ["rust"], file: "main.rs",
-    sample: `fn main() {\n    println!("Hello from Rust!");\n    for i in 1..=5 {\n        print!("{} ", i * i);\n    }\n    println!();\n}\n`
-  },
-  {
-    id: "ruby", label: "Ruby", monaco: "ruby",
-    piston: ["ruby"], file: "main.rb",
-    sample: `puts "Hello from Ruby!"\n(1..5).each { |i| print i * i, " " }\nputs\n`
-  },
-  {
-    id: "php", label: "PHP", monaco: "php",
-    piston: ["php"], file: "main.php",
-    sample: `<?php\necho "Hello from PHP!\\n";\nfor ($i = 1; $i <= 5; $i++) echo $i * $i, " ";\necho "\\n";\n`
-  },
-  {
-    id: "kotlin", label: "Kotlin", monaco: "kotlin",
-    piston: ["kotlin"], file: "main.kt",
-    sample: `fun main() {\n    println("Hello from Kotlin!")\n    for (i in 1..5) print("\${i * i} ")\n    println()\n}\n`
-  },
-  {
-    id: "swift", label: "Swift", monaco: "swift",
-    piston: ["swift"], file: "main.swift",
-    sample: `print("Hello from Swift!")\nfor i in 1...5 { print(i * i, terminator: " ") }\nprint()\n`
-  },
-  {
-    id: "bash", label: "Bash", monaco: "shell",
-    piston: ["bash", "sh"], file: "main.sh",
-    sample: `#!/usr/bin/env bash\necho "Hello from Bash!"\nfor i in 1 2 3 4 5; do\n  echo -n "$((i * i)) "\ndone\necho\n`
-  },
+  { id: "python",     label: "Python",               monaco: "python",     piston: ["python", "python3"],            file: "main.py" },
+  { id: "javascript", label: "JavaScript",           monaco: "javascript", piston: null,                             file: "main.js" },
+  { id: "web",        label: "Web (HTML + CSS + JS)", monaco: "html",       piston: null,                             file: "web" },
+  { id: "html",       label: "HTML (live preview)",  monaco: "html",       piston: null,                             file: "index.html" },
+  { id: "typescript", label: "TypeScript",           monaco: "typescript", piston: ["typescript", "ts"],             file: "main.ts" },
+  { id: "cpp",        label: "C++",                  monaco: "cpp",        piston: ["c++", "cpp"],                   file: "main.cpp" },
+  { id: "c",          label: "C",                    monaco: "c",          piston: ["c"],                            file: "main.c" },
+  { id: "csharp",     label: "C#",                   monaco: "csharp",     piston: ["csharp", "c#", "csharp.net", "mono"], file: "main.cs" },
+  { id: "java",       label: "Java",                 monaco: "java",       piston: ["java"],                         file: "Main.java" },
+  { id: "go",         label: "Go",                   monaco: "go",         piston: ["go", "golang"],                 file: "main.go" },
+  { id: "rust",       label: "Rust",                 monaco: "rust",       piston: ["rust"],                         file: "main.rs" },
+  { id: "ruby",       label: "Ruby",                 monaco: "ruby",       piston: ["ruby"],                         file: "main.rb" },
+  { id: "php",        label: "PHP",                  monaco: "php",        piston: ["php"],                          file: "main.php" },
+  { id: "kotlin",     label: "Kotlin",               monaco: "kotlin",     piston: ["kotlin"],                       file: "main.kt" },
+  { id: "swift",      label: "Swift",                monaco: "swift",      piston: ["swift"],                        file: "main.swift" },
+  { id: "bash",       label: "Bash",                 monaco: "shell",      piston: ["bash", "sh"],                   file: "main.sh" },
 ];
 
 // ----- DOM refs -----
