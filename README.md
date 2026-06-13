@@ -25,6 +25,13 @@ Kotlin, Swift and Bash** — straight from the web, no installs, no accounts.
 - **HTML** renders as a **live preview** that updates as you type, in a
   sandboxed iframe — inline CSS and JavaScript work too. Fully local, instant,
   unlimited.
+- **Ruby** and **PHP** also run **in your browser** via their official
+  WebAssembly builds ([ruby.wasm](https://github.com/ruby/ruby.wasm) and
+  [php-wasm](https://github.com/seanmorris/php-wasm)). They load once on first
+  use. If a runtime can't load (or PHP needs stdin), CodeDeck **automatically
+  falls back to the Piston server**, so these languages always work.
+- To make Python feel instant, its runtime is **preloaded in the background**
+  shortly after the page opens — so by the time you hit Run it's usually ready.
 - **Every other language** is compiled and executed by the free public
   [Piston](https://github.com/engineer-man/piston) API — there is no backend
   and no API key. Your code is sent directly to the Piston endpoint when you
@@ -59,12 +66,12 @@ can be wired up the same way.
 
 ## Notes & limits
 
-- **Python, JavaScript and TypeScript run locally with no rate limits** — run
-  them as much as you like. The remaining languages (C, C++, C#, Java, Go,
-  Rust, Ruby, PHP, Kotlin, Swift, Bash) are *compiled/managed* languages that
-  have no lightweight in-browser toolchain, so they run on the shared,
-  **rate-limited** free Piston API — running many quickly may briefly show a
-  "rate limited" message; just wait a few seconds.
+- **Python, JavaScript, TypeScript, HTML, Ruby and PHP run locally with no rate
+  limits** — run them as much as you like. The remaining languages (C, C++, C#,
+  Java, Go, Rust, Kotlin, Swift, Bash) need a full compiler toolchain that has
+  no lightweight in-browser version, so they run on the shared, **rate-limited**
+  free Piston API — running many quickly may briefly show a "rate limited"
+  message; just wait a few seconds.
 - Programs run in Piston's sandbox with limited CPU time and memory, so it's
   meant for learning, snippets and small programs — not heavy workloads.
 - JavaScript runs in your own browser tab, so be mindful that infinite loops

@@ -110,6 +110,9 @@ let runtimes = [];          // resolved Piston runtimes
 let currentLang = LANGUAGES[0];
 const codeCache = {};        // remember per-language edits during the session
 let pyodideReady = null;     // lazy-loaded Pyodide (in-browser Python) promise
+let pyodideLoaded = false;   // true once Pyodide has finished downloading
+let rubyReady = null, rubyLoaded = false;   // ruby.wasm
+let phpReady = null, phpLoaded = false;     // php-wasm
 
 // ----- Output helpers -----
 function clearOutput() {
@@ -177,11 +180,19 @@ function updateRuntimeBadge() {
     return;
   }
   if (currentLang.id === "python") {
-    runtimeBadge.textContent = pyodideReady ? "Python · in-browser" : "Python · in-browser (loads on first run)";
+    runtimeBadge.textContent = pyodideLoaded ? "Python · in-browser" : "Python · in-browser (loads on first run)";
     return;
   }
   if (currentLang.id === "typescript") {
     runtimeBadge.textContent = tsReady ? "TypeScript · in-browser" : "TypeScript · in-browser (loads on first run)";
+    return;
+  }
+  if (currentLang.id === "ruby") {
+    runtimeBadge.textContent = rubyLoaded ? "Ruby · in-browser" : "Ruby · in-browser (loads on first run)";
+    return;
+  }
+  if (currentLang.id === "php") {
+    runtimeBadge.textContent = phpLoaded ? "PHP · in-browser" : "PHP · in-browser (loads on first run)";
     return;
   }
   if (!runtimes.length) {
@@ -231,6 +242,10 @@ async function runCode() {
       await runTypeScript(code);
     } else if (currentLang.id === "python") {
       await runPython(code, stdin, t0);
+    } else if (currentLang.id === "ruby") {
+      await runRuby(code, stdin, t0);
+    } else if (currentLang.id === "php") {
+      await runPhp(code, stdin, t0);
     } else {
       await runViaPiston(code, stdin, t0);
     }
@@ -319,17 +334,18 @@ async function runTypeScript(code) {
 // and unlimited — no network round-trip and no rate limits.
 function getPyodide() {
   if (!pyodideReady) {
-    setStatus("Loading the Python runtime once (~10 MB)… future runs are instant.");
-    writeOutput([["out-meta", "⏳ First Python run: downloading the in-browser Python runtime once…"]]);
-    runtimeBadge.textContent = "Python · loading…";
     pyodideReady = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" })
-      .then((py) => { runtimeBadge.textContent = "Python · in-browser"; return py; })
+      .then((py) => { pyodideLoaded = true; if (currentLang.id === "python") updateRuntimeBadge(); return py; })
       .catch((err) => { pyodideReady = null; throw err; });
   }
   return pyodideReady;
 }
 
 async function runPython(code, stdin, t0) {
+  if (!pyodideLoaded) {
+    setStatus("Loading the Python runtime once… future runs are instant.");
+    writeOutput([["out-meta", "⏳ Loading the in-browser Python runtime…"]]);
+  }
   const py = await getPyodide();
   const startedAt = performance.now();
   const out = [];
@@ -356,6 +372,126 @@ async function runPython(code, stdin, t0) {
     writeOutput(out);
     setStatus("Python raised an error.");
   }
+}
+
+// Ruby runs locally via ruby.wasm (official CRuby compiled to WebAssembly).
+function getRuby() {
+  if (!rubyReady) {
+    rubyReady = (async () => {
+      const { DefaultRubyVM } = await import("https://cdn.jsdelivr.net/npm/@ruby/wasm-wasi@2.6.2/dist/browser/+esm");
+      const resp = await fetch("https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/ruby+stdlib.wasm");
+      const mod = await WebAssembly.compile(await resp.arrayBuffer());
+      const { vm } = await DefaultRubyVM(mod);
+      rubyLoaded = true;
+      if (currentLang.id === "ruby") updateRuntimeBadge();
+      return vm;
+    })().catch((err) => { rubyReady = null; throw err; });
+  }
+  return rubyReady;
+}
+
+// Build a single-quoted Ruby string literal (no interpolation, safe for stdin).
+function rubyStr(s) {
+  return "'" + String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
+}
+
+async function runRuby(code, stdin, t0) {
+  if (!rubyLoaded) {
+    setStatus("Loading the Ruby runtime once… future runs are instant.");
+    writeOutput([["out-meta", "⏳ Loading the in-browser Ruby runtime…"]]);
+  }
+  let vm;
+  try { vm = await getRuby(); }
+  catch { return fallbackToPiston(code, stdin, t0, "Ruby"); }
+
+  const started = performance.now();
+  // Redirect Ruby's $stdout/$stderr into a buffer and feed stdin from a StringIO,
+  // so we capture output as a return value instead of via WASI plumbing.
+  const wrapped =
+`require 'stringio'
+$stdin = StringIO.new(${rubyStr(stdin)})
+__buf = StringIO.new
+$stdout = __buf
+$stderr = __buf
+__err = nil
+begin
+${code}
+rescue Exception => e
+  __err = "#{e.class}: #{e.message}"
+end
+$stdout = STDOUT
+$stderr = STDERR
+__buf.string + (__err ? (__buf.string.empty? ? '' : "\\n") + __err : '')`;
+
+  let text;
+  try { text = vm.eval(wrapped).toString(); }
+  catch { return fallbackToPiston(code, stdin, t0, "Ruby"); }
+
+  const ms = Math.round(performance.now() - started);
+  const parts = [];
+  if (text) parts.push(["out-stdout", text.endsWith("\n") ? text : text + "\n"]);
+  else parts.push(["out-meta", "(no output)\n"]);
+  parts.push(["out-ok", `\n✓ finished in ${ms} ms (in-browser Ruby, no limits)`]);
+  writeOutput(parts);
+  setStatus("Done.");
+}
+
+// PHP runs locally via php-wasm.
+function getPhp() {
+  if (!phpReady) {
+    phpReady = (async () => {
+      const { PhpWeb } = await import("https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs");
+      const php = new PhpWeb();
+      await php.binary;            // resolves once the wasm runtime is ready
+      phpLoaded = true;
+      if (currentLang.id === "php") updateRuntimeBadge();
+      return php;
+    })().catch((err) => { phpReady = null; throw err; });
+  }
+  return phpReady;
+}
+
+async function runPhp(code, stdin, t0) {
+  // Local php-wasm stdin support is unreliable; route those runs to Piston.
+  if (stdin && stdin.trim()) return fallbackToPiston(code, stdin, t0, "PHP");
+  if (!phpLoaded) {
+    setStatus("Loading the PHP runtime once… future runs are instant.");
+    writeOutput([["out-meta", "⏳ Loading the in-browser PHP runtime…"]]);
+  }
+  let php;
+  try { php = await getPhp(); }
+  catch { return fallbackToPiston(code, stdin, t0, "PHP"); }
+
+  const started = performance.now();
+  let out = "";
+  const collect = (ev) => { const d = ev.detail; out += Array.isArray(d) ? d.join("") : (d ?? ""); };
+  php.addEventListener("output", collect);
+  php.addEventListener("error", collect);
+
+  let exit = 0;
+  try {
+    exit = await php.run(/<\?/.test(code) ? code : "<?php\n" + code);
+  } catch {
+    php.removeEventListener("output", collect);
+    php.removeEventListener("error", collect);
+    return fallbackToPiston(code, stdin, t0, "PHP");
+  }
+  php.removeEventListener("output", collect);
+  php.removeEventListener("error", collect);
+
+  const ms = Math.round(performance.now() - started);
+  const parts = [];
+  if (out) parts.push(["out-stdout", out.endsWith("\n") ? out : out + "\n"]);
+  else parts.push(["out-meta", "(no output)\n"]);
+  parts.push(["out-ok", `\n✓ exit code ${exit} · in-browser PHP, no limits · ${ms} ms`]);
+  writeOutput(parts);
+  setStatus("Done.");
+}
+
+// Shared graceful fallback: if a local WASM runtime can't load/run, use Piston.
+async function fallbackToPiston(code, stdin, t0, label) {
+  writeOutput([["out-meta", `${label}: in-browser runtime unavailable — running on the Piston server instead…`]]);
+  await runViaPiston(code, stdin, t0);
 }
 
 async function runViaPiston(code, stdin, t0) {
@@ -521,6 +657,9 @@ function boot() {
   initEditor(fromHash || {});
   loadRuntimes();
   setupDivider();
+
+  // Warm up Python in the background so its first run feels instant.
+  setTimeout(() => { getPyodide().catch(() => {}); }, 1200);
 
   languageSelect.addEventListener("change", (e) => selectLanguage(e.target.value));
   runBtn.addEventListener("click", runCode);
