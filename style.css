@@ -213,6 +213,13 @@ button:active { transform: translateY(1px); }
   word-break: break-word;
   color: var(--text);
 }
+.preview {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #ffffff;
+}
+.hidden { display: none !important; }
 .output-placeholder { color: var(--text-dim); }
 .out-stdout { color: var(--text); }
 .out-stderr { color: var(--red); }

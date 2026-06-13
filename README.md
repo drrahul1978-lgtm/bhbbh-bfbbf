@@ -22,6 +22,9 @@ Kotlin, Swift and Bash** — straight from the web, no installs, no accounts.
 - **TypeScript** also runs **fully in your browser** — the TypeScript compiler
   (itself just JavaScript) loads once, transpiles your code to JS, and runs it
   locally with no limits.
+- **HTML** renders as a **live preview** that updates as you type, in a
+  sandboxed iframe — inline CSS and JavaScript work too. Fully local, instant,
+  unlimited.
 - **Every other language** is compiled and executed by the free public
   [Piston](https://github.com/engineer-man/piston) API — there is no backend
   and no API key. Your code is sent directly to the Piston endpoint when you
