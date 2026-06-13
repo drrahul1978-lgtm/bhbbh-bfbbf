@@ -20,15 +20,14 @@
 
     <div class="toolbar">
       <label class="lang-picker">
-        <span class="lang-picker-label">Language</span>
         <select id="languageSelect" aria-label="Choose a language"></select>
       </label>
 
       <button id="runBtn" class="primary-btn" title="Run code (Ctrl+Enter)">
         <span class="run-icon">&#9654;</span> Run
       </button>
-      <button id="resetBtn" class="ghost-btn" title="Reset to the starter snippet">&#8634; Reset</button>
-      <button id="shareBtn" class="ghost-btn" title="Copy a shareable link to this code">&#128279; Share</button>
+      <button id="resetBtn" class="ghost-btn icon-btn" title="Reset to the starter snippet" aria-label="Reset">&#8634;</button>
+      <button id="shareBtn" class="ghost-btn icon-btn" title="Copy a shareable link" aria-label="Share">&#128279;</button>
     </div>
   </header>
 
@@ -51,10 +50,9 @@
     <section class="pane io-pane">
       <div class="io-block" id="stdinBlock">
         <div class="pane-head">
-          <span>Input (stdin)</span>
-          <span class="hint">optional — what your program reads</span>
+          <span>Input</span>
         </div>
-        <textarea id="stdin" class="stdin" spellcheck="false" placeholder="Type any input your program should read here…"></textarea>
+        <textarea id="stdin" class="stdin" spellcheck="false" placeholder="Optional input for your program…"></textarea>
       </div>
 
       <div class="io-block io-output">
@@ -70,10 +68,6 @@
 
   <footer class="site-footer">
     <span id="statusBar" class="status-bar">Ready.</span>
-    <span class="footer-credit">
-      Runs in your browser &middot; compiled languages execute via the free
-      <a href="https://github.com/engineer-man/piston" target="_blank" rel="noopener">Piston</a> API
-    </span>
   </footer>
 
   <!-- Monaco editor -->
