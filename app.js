@@ -104,6 +104,7 @@ let editor = null;          // Monaco editor instance
 let runtimes = [];          // resolved Piston runtimes
 let currentLang = LANGUAGES[0];
 const codeCache = {};        // remember per-language edits during the session
+let pyodideReady = null;     // lazy-loaded Pyodide (in-browser Python) promise
 
 // ----- Output helpers -----
 function clearOutput() {
@@ -149,6 +150,10 @@ function updateRuntimeBadge() {
     runtimeBadge.textContent = "browser engine";
     return;
   }
+  if (currentLang.id === "python") {
+    runtimeBadge.textContent = pyodideReady ? "Python · in-browser" : "Python · in-browser (loads on first run)";
+    return;
+  }
   if (!runtimes.length) {
     runtimeBadge.textContent = "loading runtimes…";
     return;
@@ -189,6 +194,8 @@ async function runCode() {
   try {
     if (currentLang.id === "javascript") {
       runJavaScript(code);
+    } else if (currentLang.id === "python") {
+      await runPython(code, stdin, t0);
     } else {
       await runViaPiston(code, stdin, t0);
     }
@@ -230,6 +237,50 @@ function runJavaScript(code) {
   logs.push(["out-ok", `\n✓ finished in ${ms} ms (browser)`]);
   writeOutput(logs);
   setStatus("Done.");
+}
+
+// Python runs locally in the browser via Pyodide (WebAssembly CPython).
+// The runtime is downloaded once on the first run, then every run is instant
+// and unlimited — no network round-trip and no rate limits.
+function getPyodide() {
+  if (!pyodideReady) {
+    setStatus("Loading the Python runtime once (~10 MB)… future runs are instant.");
+    writeOutput([["out-meta", "⏳ First Python run: downloading the in-browser Python runtime once…"]]);
+    runtimeBadge.textContent = "Python · loading…";
+    pyodideReady = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/" })
+      .then((py) => { runtimeBadge.textContent = "Python · in-browser"; return py; })
+      .catch((err) => { pyodideReady = null; throw err; });
+  }
+  return pyodideReady;
+}
+
+async function runPython(code, stdin, t0) {
+  const py = await getPyodide();
+  const startedAt = performance.now();
+  const out = [];
+
+  py.setStdout({ batched: (s) => out.push(["out-stdout", s + "\n"]) });
+  py.setStderr({ batched: (s) => out.push(["out-stderr", s + "\n"]) });
+
+  // Feed the whole stdin box on first read, then signal EOF.
+  let stdinSent = false;
+  py.setStdin({
+    stdin: () => { if (stdinSent) return null; stdinSent = true; return stdin || ""; },
+  });
+
+  writeOutput([["out-meta", "⏳ Running Python in your browser…"]]);
+  try {
+    await py.runPythonAsync(code);
+    const ms = Math.round(performance.now() - startedAt);
+    if (!out.length) out.push(["out-meta", "(no output)\n"]);
+    out.push(["out-ok", `\n✓ finished in ${ms} ms (in-browser Python, no limits)`]);
+    writeOutput(out);
+    setStatus("Done.");
+  } catch (err) {
+    out.push(["out-stderr", "\n" + (err && err.message ? err.message : String(err))]);
+    writeOutput(out);
+    setStatus("Python raised an error.");
+  }
 }
 
 async function runViaPiston(code, stdin, t0) {
