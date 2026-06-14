@@ -129,6 +129,7 @@ function updateIoMode() {
   $("stdinBlock").classList.toggle("hidden", isPreview);
   $("webTabs").classList.toggle("hidden", currentLang.id !== "web");
   $("fileName").classList.toggle("hidden", currentLang.id === "web");
+  $("turtleCanvas").classList.add("hidden");  // only shown during a turtle run
   $("outputLabel").textContent = isPreview ? "Preview" : "Output";
   if (currentLang.id === "html" && editor) renderHtml(editor.getValue());
   if (currentLang.id === "web" && editor) renderWeb();
@@ -343,10 +344,260 @@ function getPyodide() {
   return pyodideReady;
 }
 
+// A browser turtle module: the real one needs Tk, so we supply our own that
+// draws onto an HTML canvas. Installed into Pyodide so `import turtle` works.
+const TURTLE_PY = String.raw`
+import math
+from js import document
+
+_ctx = None
+_W = 0
+_H = 0
+
+def _cx(x): return _W / 2 + x
+def _cy(y): return _H / 2 - y
+
+def _rgb(r, g, b):
+    vals = [r, g, b]
+    if all(isinstance(v, (int, float)) for v in vals) and max(vals) <= 1.0:
+        r, g, b = [int(round(v * 255)) for v in vals]
+    return "rgb(%d,%d,%d)" % (int(r), int(g), int(b))
+
+def _tocolor(c):
+    if len(c) == 1:
+        v = c[0]
+        if isinstance(v, (tuple, list)):
+            return _rgb(v[0], v[1], v[2])
+        return str(v)
+    if len(c) >= 3:
+        return _rgb(c[0], c[1], c[2])
+    return str(c[0])
+
+class Turtle:
+    def __init__(self, *a, **k):
+        self.reset()
+    def reset(self):
+        self.x = 0.0; self.y = 0.0
+        self._heading = 0.0
+        self._down = True
+        self._pencolor = "black"
+        self._fillcolor = "black"
+        self._w = 1
+        self._filling = False
+        self._fill_pts = []
+        self._visible = True
+    def _line(self, nx, ny):
+        if self._down and _ctx is not None:
+            _ctx.beginPath()
+            _ctx.strokeStyle = self._pencolor
+            _ctx.lineWidth = self._w
+            _ctx.moveTo(_cx(self.x), _cy(self.y))
+            _ctx.lineTo(_cx(nx), _cy(ny))
+            _ctx.stroke()
+        if self._filling:
+            self._fill_pts.append((nx, ny))
+        self.x = nx; self.y = ny
+    def forward(self, d):
+        a = math.radians(self._heading)
+        self._line(self.x + d * math.cos(a), self.y + d * math.sin(a))
+    fd = forward
+    def backward(self, d): self.forward(-d)
+    back = backward; bk = backward
+    def right(self, a): self._heading = (self._heading - a) % 360
+    rt = right
+    def left(self, a): self._heading = (self._heading + a) % 360
+    lt = left
+    def goto(self, x, y=None):
+        if y is None: x, y = x
+        self._line(float(x), float(y))
+    setpos = goto; setposition = goto
+    def setx(self, x): self._line(float(x), self.y)
+    def sety(self, y): self._line(self.x, float(y))
+    def setheading(self, a): self._heading = a % 360
+    seth = setheading
+    def home(self): self._line(0, 0); self._heading = 0.0
+    def penup(self): self._down = False
+    pu = penup; up = penup
+    def pendown(self): self._down = True
+    pd = pendown; down = pendown
+    def isdown(self): return self._down
+    def pensize(self, w=None):
+        if w is None: return self._w
+        self._w = w
+    width = pensize
+    def pencolor(self, *c):
+        if not c: return self._pencolor
+        self._pencolor = _tocolor(c)
+    def fillcolor(self, *c):
+        if not c: return self._fillcolor
+        self._fillcolor = _tocolor(c)
+    def color(self, *c):
+        if not c: return (self._pencolor, self._fillcolor)
+        if len(c) == 1:
+            self._pencolor = self._fillcolor = _tocolor(c)
+        else:
+            self._pencolor = _tocolor((c[0],))
+            self._fillcolor = _tocolor((c[1],))
+    def begin_fill(self):
+        self._filling = True; self._fill_pts = [(self.x, self.y)]
+    def end_fill(self):
+        if self._filling and _ctx is not None and len(self._fill_pts) > 1:
+            _ctx.beginPath(); _ctx.fillStyle = self._fillcolor
+            fx, fy = self._fill_pts[0]
+            _ctx.moveTo(_cx(fx), _cy(fy))
+            for px, py in self._fill_pts[1:]:
+                _ctx.lineTo(_cx(px), _cy(py))
+            _ctx.closePath(); _ctx.fill()
+        self._filling = False; self._fill_pts = []
+    def circle(self, radius, extent=360, steps=None):
+        frac = abs(extent) / 360.0
+        if steps is None:
+            steps = 1 + int(min(11 + abs(radius) / 6.0, 59.0) * frac)
+        w = extent / steps
+        w2 = 0.5 * w
+        length = 2.0 * radius * math.sin(math.radians(w2))
+        if radius < 0:
+            length, w, w2 = -length, -w, -w2
+        self.left(w2)
+        for _ in range(steps):
+            self.forward(length); self.left(w)
+        self.left(-w2)
+    def dot(self, size=None, *color):
+        s = size or max(self._w + 4, 2 * self._w)
+        col = _tocolor(color) if color else self._pencolor
+        if _ctx is not None:
+            _ctx.beginPath(); _ctx.fillStyle = col
+            _ctx.arc(_cx(self.x), _cy(self.y), s / 2.0, 0, 2 * math.pi); _ctx.fill()
+    def write(self, text, move=False, align="left", font=("Arial", 8, "normal")):
+        if _ctx is not None:
+            _ctx.fillStyle = self._pencolor
+            size = font[1] if len(font) > 1 else 8
+            _ctx.font = "%dpx %s" % (int(size), font[0])
+            _ctx.fillText(str(text), _cx(self.x), _cy(self.y))
+    def pos(self): return (self.x, self.y)
+    position = pos
+    def xcor(self): return self.x
+    def ycor(self): return self.y
+    def heading(self): return self._heading
+    def towards(self, x, y=None):
+        if y is None: x, y = x
+        return math.degrees(math.atan2(y - self.y, x - self.x)) % 360
+    def distance(self, x, y=None):
+        if y is None: x, y = x
+        return math.hypot(x - self.x, y - self.y)
+    def speed(self, *a): return 0
+    def showturtle(self): self._visible = True
+    st = showturtle
+    def hideturtle(self): self._visible = False
+    ht = hideturtle
+    def isvisible(self): return self._visible
+    def stamp(self): pass
+    def clear(self):
+        if _ctx is not None: _ctx.clearRect(0, 0, _W, _H)
+
+Pen = Turtle
+RawTurtle = Turtle
+
+class _Screen:
+    def reset(self): self._bg = "white"
+    def bgcolor(self, *c):
+        if not c: return getattr(self, "_bg", "white")
+        self._bg = _tocolor(c)
+        if _ctx is not None:
+            _ctx.save(); _ctx.fillStyle = self._bg
+            _ctx.fillRect(0, 0, _W, _H); _ctx.restore()
+    def setup(self, *a, **k): pass
+    def setworldcoordinates(self, *a): pass
+    def title(self, *a): pass
+    def tracer(self, *a, **k): pass
+    def update(self): pass
+    def delay(self, *a): pass
+    def colormode(self, *a): pass
+    def bye(self): pass
+    def exitonclick(self): pass
+    def mainloop(self): pass
+    def listen(self, *a, **k): pass
+    def onkey(self, *a, **k): pass
+    def onclick(self, *a, **k): pass
+
+_screen = _Screen()
+_pen = Turtle()
+
+def Screen(): return _screen
+def getscreen(): return _screen
+getcanvas = getscreen
+
+def _setup():
+    global _ctx, _W, _H
+    cv = document.getElementById("turtleCanvas")
+    _W = cv.width; _H = cv.height
+    _ctx = cv.getContext("2d")
+    _ctx.clearRect(0, 0, _W, _H)
+    _ctx.lineCap = "round"
+    _ctx.lineJoin = "round"
+    _screen.reset()
+    _pen.reset()
+
+def reset():
+    if _ctx is not None: _ctx.clearRect(0, 0, _W, _H)
+    _pen.reset()
+
+for _n in ["forward","fd","backward","back","bk","right","rt","left","lt",
+           "goto","setpos","setposition","setx","sety","setheading","seth",
+           "home","penup","pu","up","pendown","pd","down","isdown","pensize",
+           "width","pencolor","fillcolor","color","begin_fill","end_fill",
+           "circle","dot","write","pos","position","xcor","ycor","heading",
+           "towards","distance","speed","showturtle","st","hideturtle","ht",
+           "isvisible","stamp","clear"]:
+    globals()[_n] = getattr(_pen, _n)
+
+bgcolor = _screen.bgcolor
+colormode = _screen.colormode
+tracer = _screen.tracer
+def update(): pass
+def title(*a): pass
+def setup(*a, **k): pass
+def done(): pass
+mainloop = done
+def exitonclick(): pass
+def bye(): pass
+def listen(*a, **k): pass
+def onkey(*a, **k): pass
+def onclick(*a, **k): pass
+`;
+
+let turtleInstalled = false;
+function installTurtle(py) {
+  if (turtleInstalled) return;
+  py.globals.set("__TURTLE_SRC__", TURTLE_PY);
+  py.runPython([
+    "import sys, types",
+    "if 'turtle' not in sys.modules:",
+    "    _m = types.ModuleType('turtle')",
+    "    exec(__TURTLE_SRC__, _m.__dict__)",
+    "    sys.modules['turtle'] = _m",
+    "del __TURTLE_SRC__",
+  ].join("\n"));
+  turtleInstalled = true;
+}
+
+function prepareTurtleCanvas() {
+  const cv = $("turtleCanvas");
+  cv.width = cv.clientWidth || 600;
+  cv.height = cv.clientHeight || 400;
+}
+
 async function runPython(code, stdin, t0) {
   const py = await getPyodide();
   const startedAt = performance.now();
   const out = [];
+  const usesTurtle = /\bturtle\b/.test(code);
+
+  // Show the drawing canvas for turtle programs, plain text otherwise.
+  $("preview").classList.add("hidden");
+  $("turtleCanvas").classList.toggle("hidden", !usesTurtle);
+  $("output").classList.toggle("hidden", usesTurtle);
+  $("outputLabel").textContent = usesTurtle ? "Turtle drawing" : "Output";
 
   py.setStdout({ batched: (s) => out.push(["out-stdout", s + "\n"]) });
   py.setStderr({ batched: (s) => out.push(["out-stderr", s + "\n"]) });
@@ -357,16 +608,30 @@ async function runPython(code, stdin, t0) {
     stdin: () => { if (stdinSent) return null; stdinSent = true; return stdin || ""; },
   });
 
-  writeOutput([["out-meta", "⏳ Running Python in your browser…"]]);
+  if (usesTurtle) {
+    installTurtle(py);
+    prepareTurtleCanvas();
+    py.runPython("import turtle as __t; __t._setup()");
+  } else {
+    writeOutput([["out-meta", "Running…"]]);
+  }
+
   try {
     await py.runPythonAsync(code);
     const ms = Math.round(performance.now() - startedAt);
-    if (!out.length) out.push(["out-meta", "(no output)\n"]);
-    out.push(["out-ok", `\n✓ finished in ${ms} ms (in-browser Python, no limits)`]);
-    writeOutput(out);
-    setStatus("Done.");
+    const hasText = out.some((p) => p[0] === "out-stdout" || p[0] === "out-stderr");
+    if (usesTurtle) {
+      if (hasText) { $("output").classList.remove("hidden"); writeOutput(out); }
+      setStatus(`Done — turtle drawing rendered (${ms} ms).`);
+    } else {
+      if (!out.length) out.push(["out-meta", "(no output)\n"]);
+      out.push(["out-ok", `\n✓ finished in ${ms} ms (in-browser Python, no limits)`]);
+      writeOutput(out);
+      setStatus("Done.");
+    }
   } catch (err) {
     out.push(["out-stderr", "\n" + (err && err.message ? err.message : String(err))]);
+    $("output").classList.remove("hidden");
     writeOutput(out);
     setStatus("Python raised an error.");
   }
