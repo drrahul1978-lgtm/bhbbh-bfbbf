@@ -4,14 +4,15 @@
   "description": "AI trading card grader \u2014 plus Eve, a neural network built from scratch that trains in your browser or on a Raspberry Pi, and writes her own API adapters.",
   "private": true,
   "scripts": {
-    "test": "node test/nn.test.js && node test/eve.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/pipeline.test.js",
-    "test:fast": "node test/nn.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js",
+    "test": "node test/kernel.test.js && node test/nn.test.js && node test/eve.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/pipeline.test.js",
+    "test:fast": "node test/kernel.test.js && node test/nn.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js",
     "train": "node eve-train.js",
     "train:watch": "node eve-train.js --watch",
     "train:pi": "node eve-train.js --watch --cards 800 --epochs 120",
     "serve": "python3 -m http.server 8000",
     "connect": "node eve-connect.js",
-    "discover": "node eve-connect.js --api"
+    "discover": "node eve-connect.js --api",
+    "health": "node -e \"const h=require('./eve/kernel/health.js');console.log(JSON.stringify(h.assess(h.snapshot('.'),{maxTemperatureC:75,minFreeDiskMb:1000,maxMemoryPercent:85}),null,2))\""
   },
   "dependencies": {},
   "devDependencies": {}

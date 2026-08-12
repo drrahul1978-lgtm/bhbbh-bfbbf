@@ -18,6 +18,7 @@ const NN = require("./nn.js");
 const Vision = require("./vision.js");
 const Synth = require("./synth.js");
 const Eve = require("./eve.js");
+const storage = require("./eve/kernel/storage.js");
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -78,15 +79,17 @@ function main() {
   const corrections = loadCorrections(flag("corrections", null));
 
   let net;
-  if (fs.existsSync(OUT) && !has("fresh")) {
-    net = NN.Net.fromJSON(JSON.parse(fs.readFileSync(OUT, "utf8")).net);
-    log(`  resuming from ${path.basename(OUT)}`);
+  const existing = has("fresh") ? { value: null, ok: true } : storage.readWithFallback(OUT);
+  if (existing.value) {
+    net = NN.Net.fromJSON(existing.value.net);
+    log(`  resuming from ${path.basename(OUT)}${existing.reason ? ` (${existing.reason})` : ""}`);
   } else {
+    if (existing.reason && existing.reason !== "not present") log(`  ${path.basename(OUT)}: ${existing.reason}`);
     net = new NN.Net([Vision.FEATURE_COUNT, 64, 32, Eve.KEYS.length], { seed: 20250811 });
     log("  starting from random weights");
   }
 
-  const saved = fs.existsSync(OUT) && !has("fresh") ? JSON.parse(fs.readFileSync(OUT, "utf8")) : null;
+  const saved = existing.value;
   let best = saved?.stats?.validationMAE ?? Eve.meanAbsoluteError(net, validation);
   let cardsSeen = saved?.stats?.cardsSeen ?? 0;
   let generation = saved?.stats?.generation ?? 0;
@@ -134,7 +137,9 @@ function main() {
         W: l.W.map((v) => Math.round(v * 1e5) / 1e5),
         b: l.b.map((v) => Math.round(v * 1e5) / 1e5),
       }));
-      fs.writeFileSync(OUT, JSON.stringify({
+      // Versioned + atomic: a power cut mid-write can never destroy the model,
+      // and the previous generation is kept as a fallback.
+      storage.writeJsonVersioned(OUT, {
         name: "Eve",
         format: "gmc-net-1",
         trainedAt: new Date().toISOString(),
@@ -142,7 +147,7 @@ function main() {
         keys: Eve.KEYS,
         stats: { validationMAE: mae, perKey, cardsSeen, generation, validationSize: validation.length },
         net: compact,
-      }));
+      });
       log(`  saved → ${path.basename(OUT)}  [${Eve.KEYS.map((k, i) => `${k} ${perKey[i].toFixed(2)}`).join(", ")}]`);
     } else {
       // Restore the better weights and carry on from there.

@@ -27,6 +27,7 @@ const NN = require("./nn.js");
 const Intent = require("./intent.js");
 const Skills = require("./skills.js");
 const Discover = require("./discover.js");
+const storage = require("./eve/kernel/storage.js");
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -76,7 +77,7 @@ function loadOrTrainIntent() {
   }
   const t0 = Date.now();
   const { net } = Intent.train();
-  fs.writeFileSync(INTENT_FILE, JSON.stringify(Intent.toJSON(net)));
+  storage.writeJsonAtomic(INTENT_FILE, Intent.toJSON(net));
   say(`   trained her language model on ${Intent.INTENT_NAMES.length} intents in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   return net;
 }
@@ -137,12 +138,12 @@ async function discoverApi(baseUrl) {
 
   // Remember it, so this works with no network next time.
   fs.mkdirSync(SPEC_DIR, { recursive: true });
-  fs.writeFileSync(specFileFor(result.spec.id), JSON.stringify(result.spec, null, 1));
+  storage.writeJsonAtomic(specFileFor(result.spec.id), result.spec);
 
   const source = Skills.generateAdapter(result.spec);
   fs.mkdirSync(SKILL_DIR, { recursive: true });
   const file = path.join(SKILL_DIR, `${result.spec.id}.js`);
-  fs.writeFileSync(file, source);
+  storage.writeAtomic(file, source);
   say(`✍️  Wrote a ${source.trim().split("\n").length}-line adapter → ${path.relative(process.cwd(), file)}`);
 
   if (has("show-code")) {
@@ -173,7 +174,7 @@ function getAdapter() {
     say(`✍️  Eve has no code for Home Assistant. Writing an adapter…`);
     source = Skills.generateAdapter(spec);
     fs.mkdirSync(SKILL_DIR, { recursive: true });
-    fs.writeFileSync(SKILL_FILE, source);
+    storage.writeAtomic(SKILL_FILE, source);
     say(`   wrote ${source.trim().split("\n").length} lines → ${path.relative(process.cwd(), SKILL_FILE)}`);
     say(`   (read it with --show-code; your token is not in it)`);
   }

@@ -4,3 +4,8 @@ eve-skills/
 
 node_modules/
 *.log
+
+# EVE's runtime state: logs, secrets, learned specs. Never committed.
+eve-data/
+eve.config.json
+*.prev
