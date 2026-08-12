@@ -9,15 +9,27 @@ anywhere.
 ## Windows — the installer
 
 **You do not build this yourself.** GitHub builds it on a Windows machine and
-gives you an `.exe`.
+gives you an `.exe`, because the NSIS and MSI bundlers exist only on Windows and
+cannot be cross-compiled from anything else.
 
-1. Go to the repository's **Actions** tab → **Build the desktop app** → **Run workflow**.
+A tag is what starts it:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+1. Open the repository's **Actions** tab — **Build the desktop app** is running.
 2. Wait about ten minutes.
 3. Download the **eve-Windows** artifact at the bottom of the run.
 4. Unzip it, run the `.exe`, and EVE appears in the Start Menu.
 
-Or tag a release — `git tag v1.0.0 && git push --tags` — and the installers are
-attached to a draft release instead.
+The same run also attaches the installers to a **draft** release, which only you
+can see until you choose to publish it.
+
+> **The "Run workflow" button may not be there.** GitHub only offers it for
+> workflows that exist on the repository's *default* branch. While this work
+> lives on a feature branch, use the tag above — tags trigger the build from
+> whatever branch they point at. Merging the branch makes the button appear.
 
 > **SmartScreen will warn you.** "Windows protected your PC — unknown
 > publisher." That is not a virus warning; it means the installer is not signed
