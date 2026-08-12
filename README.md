@@ -26,7 +26,12 @@ Assistant and she writes the adapter herself — real JavaScript, generated for
 your address, shown to you before it runs — then controls your devices from
 plain English. Details and the honest limits are in **[EVE.md](EVE.md)**.
 
+**On Windows?** There is no installer — the browser turns the page into an app.
+See **[WINDOWS.md](WINDOWS.md)**, including the camera catch (Chrome will not
+hand over a camera over plain `http` to anything but `localhost`).
+
 ```bash
+node eve-proxy.js           # serve everything; visitors need no key or account
 npm test                    # verify the maths, the learning and the pipeline
 node eve-train.js --watch   # keep improving her on a Pi, forever
 node eve-connect.js --chat  # talk to your house from the Pi's command line

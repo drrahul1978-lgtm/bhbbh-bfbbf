@@ -14,9 +14,10 @@
  * visitor's experience is identical to having it embedded; the difference is
  * that it keeps working.
  *
- *   node eve-proxy.js                  serves the site and grades on port 8080
+ *   node eve-proxy.js                  serve the site on port 8080
  *   node eve-proxy.js --port 3000
- *   node eve-proxy.js --no-review      skip the background reviewer
+ *   node eve-proxy.js --https          needed for the camera from another machine
+ *   node eve-proxy.js --no-review      do not file low-confidence grades
  *
  * There is no API key in this project any more — not here, not in the page, not
  * in the vault. Grading happens in the visitor's browser, and Eve checks her own
@@ -29,8 +30,11 @@
 "use strict";
 
 const http = require("http");
+const https = require("https");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const { execFileSync } = require("child_process");
 const kernel = require("./eve/kernel/index.js");
 const { CaseStore } = require("./eve/review/cases.js");
 
@@ -58,6 +62,56 @@ const log = eve.log;
  * cannot use it, and that you can change it in one place when it leaks.
  */
 const APP_TOKEN = flag("app-token", process.env.EVE_APP_TOKEN || null);
+const HTTPS = args.includes("--https");
+
+/**
+ * A certificate, so a browser on another machine will hand over the camera.
+ *
+ * This is not about eavesdropping on your own network. Chrome and Edge refuse
+ * getUserMedia — and refuse to install a page as an app — unless the origin is
+ * "secure". localhost counts; http://192.168.1.40:8080 does not. So a Windows
+ * PC pointed at the Pi over plain HTTP gets no camera at all, which makes the
+ * eye trainer useless remotely.
+ *
+ * A self-signed certificate fixes the camera: accept the warning once and the
+ * origin is treated as secure. Installing as an app may still be refused,
+ * because browsers want a certificate they trust for that — in which case run
+ * this on the Windows machine itself, where localhost needs no certificate.
+ */
+function certificate(dir) {
+  const keyFile = path.join(dir, "eve-key.pem");
+  const certFile = path.join(dir, "eve-cert.pem");
+  if (fs.existsSync(keyFile) && fs.existsSync(certFile)) {
+    return { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) };
+  }
+
+  // Name every address this machine answers on, so the certificate matches
+  // however you reach it — by hostname or by IP.
+  const names = new Set(["localhost", os.hostname(), `${os.hostname()}.local`]);
+  const ips = new Set(["127.0.0.1"]);
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const iface of list || []) if (iface.family === "IPv4") ips.add(iface.address);
+  }
+  const alt = [...names].map((n) => `DNS:${n}`).concat([...ips].map((i) => `IP:${i}`)).join(",");
+
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    execFileSync("openssl", [
+      "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "3650",
+      "-keyout", keyFile, "-out", certFile,
+      "-subj", "/CN=eve.local", "-addext", `subjectAltName=${alt}`,
+    ], { stdio: "ignore", timeout: 30000 });
+    fs.chmodSync(keyFile, 0o600);
+    log.info("made a self-signed certificate", { names: [...names], addresses: [...ips] });
+    return { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) };
+  } catch (err) {
+    throw new Error(
+      `Could not make a certificate (${err.message}). openssl is needed for --https — ` +
+      `on a Pi: sudo apt install openssl. Or run this on the machine with the camera, ` +
+      `where localhost needs no certificate.`
+    );
+  }
+}
 
 /* Requests per address, in memory and bounded. Nothing here costs money any
  * more, but this endpoint writes to the SD card, and an open endpoint that
@@ -125,7 +179,7 @@ function fileDisagreement(payload) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
+const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const send = (code, body, type = "application/json") => {
     res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store" });
@@ -176,11 +230,16 @@ const server = http.createServer(async (req, res) => {
   }
   res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
   res.end(fs.readFileSync(file));
-});
+};
+
+const server = HTTPS
+  ? https.createServer(certificate(eve.config.dataDir), handler)
+  : http.createServer(handler);
 
 server.listen(PORT, () => {
   log.info(`serving on port ${PORT}`, { grading: "local", reviewer: REVIEW });
-  console.log(`\n🧠 EVE is serving on http://localhost:${PORT}`);
+  const scheme = HTTPS ? "https" : "http";
+  console.log(`\n🧠 EVE is serving on ${scheme}://localhost:${PORT}`);
   console.log(`   ${eve.describe()}`);
   console.log(`   grading: local — Eve runs in the visitor's browser, no key anywhere`);
   if (eve.external?.volumes?.length) {
@@ -189,7 +248,15 @@ server.listen(PORT, () => {
   console.log(`   checking: ${REVIEW ? "low-confidence grades are filed for you" : "off"}`);
   console.log(`   limits: ${PER_MINUTE}/minute and ${PER_DAY}/day per address${APP_TOKEN ? ", app token required" : ""}`);
   if (!APP_TOKEN) console.log(`   (set EVE_APP_TOKEN to refuse clients that are not yours)`);
-  console.log(`\n   Visitors need no key, no account and no settings.\n`);
+  console.log(`\n   Visitors need no key, no account and no settings.`);
+  if (!HTTPS) {
+    console.log(`\n   Note: the camera in eye.html only works on localhost over plain http.`);
+    console.log(`   To use it from another machine, restart with --https, or run this`);
+    console.log(`   on the machine that has the camera.\n`);
+  } else {
+    console.log(`\n   Reaching this from another machine: your browser will warn about the`);
+    console.log(`   certificate. Accept it once and the camera will work.\n`);
+  }
 });
 
 process.on("SIGINT", () => { eve.shutdown(); server.close(() => process.exit(0)); });

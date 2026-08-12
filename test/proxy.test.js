@@ -90,6 +90,33 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     }
     ok("the vault, the filed cases and her skills are refused, whether they exist or not");
 
+    // --- HTTPS, which is what makes the camera work from another machine ---
+    const securePort = port + 3;
+    const secureDir = path.join(tmp, "secure");
+    const secure = execFile("node", [path.join(ROOT, "eve-proxy.js"), "--https", "--port", String(securePort)], {
+      cwd: ROOT, env: { ...process.env, EVE_DATA_DIR: secureDir },
+    });
+    try {
+      // A self-signed certificate is the whole point, so do not verify it here.
+      const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+      let health = null;
+      for (let i = 0; i < 80; i++) {
+        try { health = await fetch(`https://127.0.0.1:${securePort}/api/health`).then((r) => r.json()); break; }
+        catch { await new Promise((r) => setTimeout(r, 100)); }
+      }
+      assert.ok(health, "the secure server should answer over TLS");
+      assert.strictEqual(health.grading, "local");
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous ?? "1";
+
+      assert.ok(fs.existsSync(path.join(secureDir, "eve-cert.pem")), "it should have made a certificate");
+      const mode = fs.statSync(path.join(secureDir, "eve-key.pem")).mode & 0o777;
+      assert.strictEqual(mode, 0o600, "the private key must not be readable by other users");
+      ok("--https serves over TLS with a self-signed certificate, key kept private");
+    } finally {
+      secure.kill("SIGKILL");
+    }
+
     console.log(`\neve-proxy: ${passed} tests passed`);
   } finally {
     child.kill("SIGKILL");
