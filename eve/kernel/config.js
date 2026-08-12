@@ -81,8 +81,11 @@ function fromEnv(env) {
   return out;
 }
 
-function load({ file = null, env = process.env, overrides = {} } = {}) {
+function load({ file = null, env = process.env, overrides = {}, platform = null } = {}) {
   let config = { ...DEFAULTS };
+  // What the machine suggests, applied above the built-in defaults but below
+  // your config file — detection informs, it never overrules a deliberate choice.
+  if (platform) config = deepMerge(config, platform);
   const configFile = file || env.EVE_CONFIG || "eve.config.json";
   if (fs.existsSync(configFile)) {
     try {

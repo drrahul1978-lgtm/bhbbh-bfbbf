@@ -18,9 +18,12 @@ const { Logger } = require("./log.js");
 const { Ledger } = require("./audit.js");
 const { Permissions, PermissionDenied, CAPABILITIES } = require("./permissions.js");
 const { HealthMonitor } = require("./health.js");
+const platform = require("../platform/detect.js");
 
 function boot({ configFile = null, env = process.env, overrides = {}, confirm = null } = {}) {
-  const cfg = config.load({ file: configFile, env, overrides });
+  // Look at the machine first, so the defaults suit wherever she woke up.
+  const host = platform.detect();
+  const cfg = config.load({ file: configFile, env, overrides, platform: platform.tuning(host) });
   fs.mkdirSync(cfg.dataDir, { recursive: true });
 
   const vault = new Vault({ file: cfg.secretsFile, env });
@@ -34,6 +37,10 @@ function boot({ configFile = null, env = process.env, overrides = {}, confirm = 
   const permissions = new Permissions({ policy: cfg.permissions, confirm, log, audit });
   const health = new HealthMonitor({ config: cfg, log });
 
+  log.info(platform.describe(host), {
+    host: host.host, class: host.class, container: host.container,
+    hardware: platform.hostCapabilities(host),
+  });
   log.info("kernel started", {
     dataDir: cfg.dataDir,
     secrets: vault.names(),     // names only, never values
@@ -43,6 +50,8 @@ function boot({ configFile = null, env = process.env, overrides = {}, confirm = 
 
   return {
     config: cfg, vault, log, audit, permissions, health,
+    platform: host,
+    describe: () => platform.describe(host),
     /** Run guarded work: permission first, then recorded in the ledger. */
     guard: (capability, spec, work, verify) => permissions.guard(capability, spec, work, verify),
     shutdown() {
