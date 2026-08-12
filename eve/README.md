@@ -149,3 +149,48 @@ and the audit ledger will not accept the latter as verification.
 Untrusted code is exercised in a **separate process** first — empty environment,
 hard timeout, killed on overrun — because a brand-new adapter has never run
 before and the first run is exactly when it might do something stupid.
+
+---
+
+## Serving the site with no setup for anyone
+
+`node eve-proxy.js` — the machine holds the key, the browser never sees it.
+
+```
+🧠 EVE is serving on http://localhost:8080
+   Running on a Raspberry Pi 4 Model B — 4 cores, 3.7GB memory, arm64.
+   cloud grading: on — the key stays on this machine
+   background reviewer: on, and invisible to visitors
+
+   Visitors need no key, no account and no settings.
+```
+
+A visitor opens the page, uploads a card, gets a grade. There is no settings
+panel to find, nothing to paste, no account. The page asks `/api/health` whether
+this host grades; if it does it uses it silently, and if it does not — a plain
+static host, or the file opened directly — Eve handles it locally instead.
+Either way the page works on arrival.
+
+### Why the key is not in the page
+
+It used to be, split across two strings so scanners would not catch it. That
+hides a secret from automated tooling, not from people: anything in client-side
+JavaScript is readable by anyone who opens the page, and published keys get
+found and drained within days. Then it works for nobody, including you.
+
+Here the key is attached by the server on the way out. `test/proxy.test.js`
+asserts it is in the outbound request and in nothing the browser downloads.
+
+`eve-data/` sits inside the directory being served, so the deny-list is checked
+*before* the filesystem — and answers 403 whether or not the file exists, so the
+refusal itself discloses nothing.
+
+### The reviewer is invisible
+
+Grading answers the visitor first; the reviewer runs afterwards, on a separate
+tick. It cannot delay the answer, cannot change it, and cannot fail in a way the
+visitor sees. Nothing in the response mentions it — tested.
+
+What it finds is filed for you in `eve-data/cases.json`, under the
+`disputed_exchange_only` privacy scope: the grade and the question, **never the
+photograph**.

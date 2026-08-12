@@ -12,6 +12,16 @@
 // and no network at all. A cloud provider is now opt-in, using your own key.
 
 const PROVIDERS = {
+  // When the page is served by eve-proxy.js, the machine serving it holds the
+  // key and does the grading. The visitor never sees a key, a settings panel,
+  // or any sign that a provider is involved — which is the point.
+  site: {
+    name: "This server",
+    hosted: true,
+    endpoint: "/api/grade",
+    defaultModel: "handled by the server",
+    keyHelp: "This server grades for you — nothing to configure.",
+  },
   // Eve is not a provider at all — she is the network in eve.js, running here,
   // on this device, with no key and no request. Kept in this list so she can be
   // picked from the same menu as the cloud models.
@@ -260,6 +270,29 @@ async function gradeCard() {
   const providerId = localStorage.getItem("gmc_provider") || els.provider.value;
   const provider = PROVIDERS[providerId] || PROVIDERS.groq;
 
+  // Grading done by the machine serving the page. No key here, by design.
+  if (provider.hosted) {
+    els.gradeBtn.disabled = true;
+    els.results.classList.add("hidden");
+    setStatus("Inspecting centering, corners, edges & surface…", false, true);
+    try {
+      const res = await fetch("/api/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageDataUrl }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `the server replied ${res.status}`);
+      renderResults(body);
+      setStatus("");
+    } catch (err) {
+      setStatus(`❌ ${err.message}`, true);
+    } finally {
+      updateGradeButton();
+    }
+    return;
+  }
+
   if (provider.local) {
     els.gradeBtn.disabled = true;
     els.results.classList.add("hidden");
@@ -392,9 +425,33 @@ function applyMagicLink() {
   setStatus("✅ API key configured automatically — you're ready to grade!");
 }
 
+/**
+ * Ask the machine serving this page whether it grades.
+ *
+ * If it does, use it silently: no key, no settings, nothing for the visitor to
+ * do or notice. If it does not — a plain static host, or the file opened
+ * directly — Eve handles it locally instead. Either way the page works on
+ * arrival, and either way nobody is asked for a credential.
+ */
+async function detectHostedGrading() {
+  if (localStorage.getItem("gmc_provider")) return;   // an explicit choice wins
+  try {
+    const res = await fetch("/api/health", { cache: "no-store" });
+    if (!res.ok) return;
+    const info = await res.json();
+    if (info.grading !== "available") return;
+    els.provider.value = "site";
+    syncProviderUI();
+    localStorage.setItem("gmc_provider", "site");
+  } catch {
+    // No server behind this page: Eve stays selected. Nothing to report.
+  }
+}
+
 // ---------- init ----------
 applyMagicLink();
 loadSettings();
+detectHostedGrading();
 updateGradeButton();
 if (!localStorage.getItem("gmc_api_key")) {
   els.apiKey.placeholder = "Your own key — or use Eve, who needs none";

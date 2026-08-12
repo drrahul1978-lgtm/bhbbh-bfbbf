@@ -24,7 +24,21 @@ const fakeTransport = (reply) => ({
 
 (async () => {
   // ---------------------------------------------- the quarantine
-  // The whole point of this subsystem: Groq lives here and nowhere else.
+  //
+  // The rule this enforces has been narrowed deliberately, and it is worth
+  // being precise about what it now protects.
+  //
+  // Originally: Groq appeared nowhere outside eve/review/, because it existed
+  // only to review finished work.
+  //
+  // Now the same provider also grades cards on the visitor's behalf, so that
+  // nobody has to supply a key. That is a request-time call, and it lives in
+  // eve-proxy.js — allowed below, by name, with this explanation.
+  //
+  // What has NOT changed is the invariant that mattered: the REVIEWER cannot
+  // influence an answer. It runs after the response has been sent, it is
+  // advisory, and it outranks nobody. Grading and reviewing are separate calls
+  // that happen to use the same provider — not one path feeding the other.
   const offenders = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -43,11 +57,25 @@ const fakeTransport = (reply) => ({
     }
   };
   walk(path.join(__dirname, ".."));
-  // app.js is the old card grader, which has its own separate provider list.
-  const realOffenders = offenders.filter((f) => f !== "app.js");
+  // Files permitted to name a provider, each for a stated reason:
+  //   app.js       the browser-side provider list, which holds no credentials
+  //   eve-proxy.js grades on the visitor's behalf so they need no key
+  const ALLOWED = new Set(["app.js", "eve-proxy.js"]);
+  const realOffenders = offenders.filter((f) => !ALLOWED.has(f));
   assert.deepStrictEqual(realOffenders, [],
     `Groq must stay inside eve/review/. Found references in: ${realOffenders.join(", ")}`);
-  ok("Groq appears nowhere outside eve/review/ — the quarantine holds, mechanically");
+  ok("Groq appears only in eve/review/ and the two files allowed to name it");
+
+  // The grading path must not import the reviewer, so a review can never end
+  // up in the reply. They share a provider, not a code path.
+  const proxySource = fs.readFileSync(path.join(__dirname, "..", "eve-proxy.js"), "utf8");
+  // Just the function body — the doc comment that follows it describes the
+  // reviewer, and would match on the word alone.
+  const gradeStart = proxySource.indexOf("async function gradeWithProvider");
+  const gradeSection = proxySource.slice(gradeStart, proxySource.indexOf("\n}", gradeStart));
+  assert.ok(!/evaluator|review/i.test(gradeSection), "grading must not touch the reviewer");
+  assert.ok(/setImmediate/.test(proxySource), "the reviewer must run after the response, not before it");
+  ok("grading never touches the reviewer, and the reviewer runs only after the answer has gone");
 
   // No key configured means no transport, not a broken EVE.
   assert.strictEqual(makeGroqTransport({ vault: new Vault({ env: {} }) }), null);
