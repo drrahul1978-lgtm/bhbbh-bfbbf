@@ -526,3 +526,69 @@ code {
   color: #a9b6d8;
 }
 #skillCodeWrap h4 { margin-top: 18px; font-size: 0.98rem; }
+
+/* ===========================================================================
+   Eve's Eye — the camera trainer
+   =========================================================================== */
+
+.eye-stage {
+  position: relative;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.eye-stage video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.eye-overlay {
+  position: absolute;
+  left: 12px; bottom: 12px;
+  background: rgba(11, 14, 23, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  backdrop-filter: blur(4px);
+}
+
+.eye-verdict { text-align: center; padding: 10px 0 16px; }
+.eye-guess {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  line-height: 1.1;
+  letter-spacing: 1px;
+}
+.eye-guess.known { color: var(--good); }
+.eye-guess.unsure { color: var(--mid); }
+.eye-guess.unknown { color: var(--text-dim); }
+.eye-guess-why { color: var(--text-dim); font-size: 0.92rem; margin-top: 4px; }
+
+.known-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.known-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.known-label { font-weight: 600; flex: 0 0 auto; }
+.known-meta { color: var(--text-dim); font-size: 0.82rem; flex: 1; }
+
+.field-row.inline input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.field-row.inline input[type="text"]:focus { outline: 2px solid var(--accent-2); border-color: transparent; }

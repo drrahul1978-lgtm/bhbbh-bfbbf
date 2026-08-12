@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eve's Eye — teach her what things are</title>
+  <meta name="description" content="Show Eve an object through your camera and teach her what it is. Runs entirely on your device — no key, no account, no upload." />
+  <link rel="manifest" href="eye.webmanifest" />
+  <meta name="theme-color" content="#0b0e17" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>" />
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <header class="site-header">
+    <div class="logo">
+      <span class="logo-icon">👁️</span>
+      <span class="logo-text">Eve's<span class="accent"> Eye</span></span>
+    </div>
+    <div class="header-actions">
+      <a class="ghost-btn" href="train.html">🧠 Her studio</a>
+      <a class="ghost-btn" href="index.html">🃏 Card grader</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Show her something.<br /><span class="accent">Tell her what it is.</span></h1>
+      <p class="subtitle">
+        Eve cannot name an object she has never seen — that needs a model trained on a
+        million photographs. What she can do is learn <em>yours</em>. Hold something up,
+        name it a few times, and she will know it afterwards.
+      </p>
+    </section>
+
+    <section class="card panel">
+      <div class="eye-stage">
+        <video id="camera" autoplay playsinline muted></video>
+        <canvas id="capture" hidden></canvas>
+        <div class="eye-overlay" id="liveRead">Camera off</div>
+      </div>
+
+      <div class="train-controls">
+        <button id="startCamera" class="primary-btn small">📷 Turn the camera on</button>
+        <button id="stopCamera" class="ghost-btn" disabled>⏹ Off</button>
+        <select id="cameraPick" class="hidden"></select>
+      </div>
+      <p class="status-msg" id="cameraStatus">Your camera feed stays on this device. Nothing is uploaded, and there is no key or account.</p>
+    </section>
+
+    <section class="card panel">
+      <h2>👁️ What she sees right now</h2>
+      <div class="eye-verdict">
+        <div class="eye-guess" id="guess">—</div>
+        <div class="eye-guess-why" id="guessWhy">Turn the camera on and she will tell you what she can measure.</div>
+      </div>
+      <ul class="eve-notes" id="sceneNotes"></ul>
+    </section>
+
+    <section class="card panel">
+      <h2>🎓 Teach her this object</h2>
+      <p class="hint">
+        Hold it in front of the camera and name it. Take about eight shots, moving it
+        between each — different angles and distances teach her what matters and what
+        does not. Same pose eight times teaches her very little.
+      </p>
+      <div class="field-row inline">
+        <label for="objectName">This is a…</label>
+        <input type="text" id="objectName" placeholder="my keys" autocomplete="off" spellcheck="false" />
+        <button id="teachOnce" class="primary-btn small" disabled>📸 Take a shot</button>
+        <button id="teachBurst" class="ghost-btn" disabled>⚡ Take 8, one a second</button>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress"><div class="progress-fill" id="teachProgress"></div></div>
+        <p class="status-msg" id="teachStatus"></p>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <h2>📚 What she knows</h2>
+      <div id="knownList" class="known-list"><p class="hint">Nothing yet.</p></div>
+      <div class="train-controls">
+        <button id="exportEye" class="ghost-btn">⬇️ Export her eye</button>
+        <button id="importEyeBtn" class="ghost-btn">⬆️ Import</button>
+        <input type="file" id="importEye" accept="application/json" hidden />
+        <button id="forgetAll" class="ghost-btn danger">🗑️ Forget everything</button>
+      </div>
+      <p class="status-msg" id="fileStatus"></p>
+    </section>
+
+    <div class="disclaimer">
+      ⚠️ She recognises what you have taught her, in roughly the lighting you taught it
+      in. She will confuse two objects of similar colour and shape — and will say so
+      rather than guess. Anything she was never shown comes back as
+      <em>“I do not recognise that”</em>, always. A recogniser that names its closest
+      guess for something it has never seen is worse than useless.
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>👁️ Runs entirely on this device — camera, learning and recognition. No key, no account, nothing uploaded.</p>
+  </footer>
+
+  <script src="nn.js"></script>
+  <script src="eve/vision/scene.js"></script>
+  <script src="eve/vision/recognise.js"></script>
+  <script src="eye.js"></script>
+</body>
+</html>
