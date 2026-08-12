@@ -7,6 +7,11 @@
  *   node eve-connect.js --url ... --token ... --chat
  *   node eve-connect.js --url ... --token ... --show-code
  *
+ * Or point her at an API she has never seen and let her work it out herself:
+ *
+ *   node eve-connect.js --api http://192.168.1.50:9000 --token XXX --list
+ *   node eve-connect.js --api http://... --offline      (never touch the web)
+ *
  * The token can also come from the environment, which keeps it out of your
  * shell history:  export HA_TOKEN=...   export HA_URL=...
  *
@@ -21,6 +26,7 @@ const readline = require("readline");
 const NN = require("./nn.js");
 const Intent = require("./intent.js");
 const Skills = require("./skills.js");
+const Discover = require("./discover.js");
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -34,13 +40,20 @@ const TOKEN = flag("token", process.env.HA_TOKEN);
 const SKILL_DIR = path.join(__dirname, "eve-skills");
 const SKILL_FILE = path.join(SKILL_DIR, "home_assistant.js");
 const INTENT_FILE = path.join(__dirname, "eve-intent.json");
+const SPEC_DIR = path.join(SKILL_DIR, "specs");
+const API_ARG = flag("api", null);      // discover an API she has never met
+const OFFLINE = has("offline");
 
-// The free text is whatever is left once the flags are removed.
+// Flags that consume the argument after them — their values must not be
+// mistaken for part of what you typed, or a URL's digits get read as a value.
+const VALUED_FLAGS = ["url", "token", "api", "name", "search-url"];
+
+// The free text is whatever is left once the flags and their values are removed.
 const command = args
   .filter((a, i) => {
     if (a.startsWith("--")) return false;
     const previous = args[i - 1];
-    return !(previous && previous.startsWith("--") && ["url", "token"].includes(previous.slice(2)));
+    return !(previous && previous.startsWith("--") && VALUED_FLAGS.includes(previous.slice(2)));
   })
   .join(" ")
   .trim();
@@ -66,6 +79,79 @@ function loadOrTrainIntent() {
   fs.writeFileSync(INTENT_FILE, JSON.stringify(Intent.toJSON(net)));
   say(`   trained her language model on ${Intent.INTENT_NAMES.length} intents in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   return net;
+}
+
+const specFileFor = (id) => path.join(SPEC_DIR, `${id}.json`);
+
+/** Anything she has worked out before, so a Pi with no WiFi still starts up. */
+function loadCachedSpec(baseUrl) {
+  if (!fs.existsSync(SPEC_DIR)) return null;
+  for (const file of fs.readdirSync(SPEC_DIR)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(path.join(SPEC_DIR, file), "utf8"));
+      if (saved.baseUrl === String(baseUrl).replace(/\/+$/, "")) return saved;
+    } catch { /* skip an unreadable cache entry */ }
+  }
+  return null;
+}
+
+/**
+ * Point her at an API she has never seen and let her work it out: read its own
+ * description if it publishes one, otherwise study what its endpoints return,
+ * otherwise (online only) look for a published description on the web.
+ */
+async function discoverApi(baseUrl) {
+  const cached = loadCachedSpec(baseUrl);
+  if (cached && !has("rediscover")) {
+    say(`🧠 I worked this API out before — reusing what I learned about ${cached.name}.`);
+  } else {
+    say(`🔍 I have never seen ${baseUrl} before. Working out what it is…`);
+  }
+
+  const result = await Discover.discover({
+    baseUrl,
+    token: TOKEN,
+    name: flag("name", null),
+    fetchImpl: globalThis.fetch,
+    allowNetwork: !OFFLINE,
+    cached: cached && !has("rediscover") ? cached : null,
+  });
+
+  for (const line of result.log) say(`   · ${line}`);
+
+  if (!result.spec) {
+    say(`\n❌ I could not work that API out.`);
+    if (result.tier === "offline") {
+      say("   No internet, so I could not look for a published description — everything I tried was on the local network.");
+      say("   Either connect this Pi to the internet and try again, or describe the API yourself with Skills.restSpec().");
+    } else {
+      say("   It publishes no machine-readable description, and nothing it returned looked like a list of things.");
+    }
+    process.exit(1);
+  }
+
+  say(`\n✅ Worked it out via ${result.tier} (confidence ${(result.confidence * 100).toFixed(0)}%).`);
+  if (result.unknown.length) {
+    say(`   Still unsure about: ${result.unknown.join(", ")} — I will not guess at those.`);
+  }
+
+  // Remember it, so this works with no network next time.
+  fs.mkdirSync(SPEC_DIR, { recursive: true });
+  fs.writeFileSync(specFileFor(result.spec.id), JSON.stringify(result.spec, null, 1));
+
+  const source = Skills.generateAdapter(result.spec);
+  fs.mkdirSync(SKILL_DIR, { recursive: true });
+  const file = path.join(SKILL_DIR, `${result.spec.id}.js`);
+  fs.writeFileSync(file, source);
+  say(`✍️  Wrote a ${source.trim().split("\n").length}-line adapter → ${path.relative(process.cwd(), file)}`);
+
+  if (has("show-code")) {
+    say("\n" + "─".repeat(70));
+    say(source);
+    say("─".repeat(70) + "\n");
+  }
+
+  return Skills.compile(source, { token: TOKEN }, globalThis.fetch);
 }
 
 /** Write the adapter if she has not already, and load it. */
@@ -150,7 +236,38 @@ async function handle(net, adapter, things, text) {
   return adapter.list();
 }
 
+/** Keep talking until Ctrl-C. */
+function startChat(net, adapter, things) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "you › " });
+  say('Talk to her. "list devices", "turn off the porch light", "is the fan on". Ctrl-C to stop.\n');
+  rl.prompt();
+  rl.on("line", async (line) => {
+    const text = line.trim();
+    if (text) {
+      try {
+        things = await handle(net, adapter, things, text);
+      } catch (err) {
+        say(`❌ ${err.message}`);
+      }
+    }
+    rl.prompt();
+  });
+  rl.on("close", () => say("\nBye."));
+}
+
 async function main() {
+  if (API_ARG) {
+    say("🧠 Eve — working out an API on her own.\n");
+    const net = loadOrTrainIntent();
+    const adapter = await discoverApi(API_ARG);
+    let things = await adapter.list();
+    say(`👀 ${things.length} things found.\n`);
+    if (has("list")) things = await handle(net, adapter, things, "list my devices");
+    if (command) things = await handle(net, adapter, things, command);
+    if (has("chat")) return startChat(net, adapter, things);
+    return;
+  }
+
   if (!URL_ARG || !TOKEN) {
     say("Eve needs to know where Home Assistant is and how to authenticate.\n");
     say("  node eve-connect.js --url http://homeassistant.local:8123 --token YOUR_TOKEN --list\n");
@@ -188,23 +305,7 @@ async function main() {
     if (!has("chat")) return;
   }
 
-  if (has("chat") || (!command && !has("list"))) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "you › " });
-    say('Talk to her. "list devices", "turn off the porch light", "is the fan on". Ctrl-C to stop.\n');
-    rl.prompt();
-    rl.on("line", async (line) => {
-      const text = line.trim();
-      if (text) {
-        try {
-          things = await handle(net, adapter, things, text);
-        } catch (err) {
-          say(`❌ ${err.message}`);
-        }
-      }
-      rl.prompt();
-    });
-    rl.on("close", () => say("\nBye."));
-  }
+  if (has("chat") || (!command && !has("list"))) startChat(net, adapter, things);
 }
 
 main().catch((err) => {

@@ -44,7 +44,7 @@
    * A generic REST service. Give it the endpoint that lists things and the
    * endpoints that act on them, and Eve writes the rest.
    */
-  function restSpec({ id, name, baseUrl, auth, listPath, itemsKey, idKey, nameKey, stateKey, actions }) {
+  function restSpec({ id, name, baseUrl, auth, listPath, itemsKey, idKey, nameKey, stateKey, actions, nextKey }) {
     return {
       id: id || "custom_api",
       name: name || "Custom API",
@@ -52,10 +52,13 @@
       baseUrl: String(baseUrl || "").replace(/\/+$/, ""),
       auth: auth || { type: "none" },
       listPath: listPath || "/",
+      // Any of these may be a dotted path ("traits.OnOff.on"), because plenty of
+      // APIs bury the interesting value several objects deep.
       itemsKey: itemsKey || null,
       idKey: idKey || "id",
       nameKey: nameKey || "name",
       stateKey: stateKey || "state",
+      nextKey: nextKey || null,   // key holding the "next page" URL, if paged
       actions: actions || {},
       capabilities: ["list", ...Object.keys(actions || {})],
     };
@@ -67,29 +70,112 @@
 
   const authHeaderCode = (auth) => {
     if (!auth || auth.type === "none") return "";
-    if (auth.type === "bearer") return `    headers.Authorization = "Bearer " + config.token;\n`;
+    if (auth.type === "bearer" || auth.type === "oauth2") return `    headers.Authorization = "Bearer " + config.token;\n`;
     if (auth.type === "header") return `    headers[${JSON.stringify(auth.header || "X-API-Key")}] = config.token;\n`;
+    if (auth.type === "basic") return `    headers.Authorization = "Basic " + config.token;\n`;
     return "";
   };
+
+  /** Some APIs want the key in the query string rather than a header. */
+  const authQueryCode = (auth) =>
+    auth && auth.type === "query"
+      ? `    url += (url.indexOf("?") >= 0 ? "&" : "?") + ${JSON.stringify(auth.param || "key")} + "=" + encodeURIComponent(config.token);\n`
+      : "";
+
+  /**
+   * OAuth tokens expire, usually within the hour. If a refresh token and token
+   * endpoint were supplied, the adapter renews its own access token on the first
+   * 401 and retries once, so a Pi left running for days keeps working.
+   */
+  const refreshCode = (auth) =>
+    auth && auth.type === "oauth2"
+      ? `
+  let accessToken = config.token;
+
+  async function refreshAccessToken() {
+    if (!config.refreshToken || !config.tokenUrl) return false;
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: config.refreshToken,
+      client_id: config.clientId || "",
+      client_secret: config.clientSecret || "",
+    });
+    const res = await fetch(config.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    if (!json.access_token) return false;
+    accessToken = json.access_token;
+    return true;
+  }
+`
+      : "";
 
   /** Shared HTTP helper, written into every adapter Eve generates. */
   const requestCode = (spec) => `
   const BASE = ${JSON.stringify(spec.baseUrl)};
-
+${refreshCode(spec.auth)}
   async function request(path, options) {
     options = options || {};
+    let url = path.indexOf("http") === 0 ? path : BASE + path;
     const headers = { "Content-Type": "application/json" };
-${authHeaderCode(spec.auth)}    const res = await fetch(BASE + path, {
+${authHeaderCode(spec.auth)}${authQueryCode(spec.auth)}    let res = await fetch(url, {
       method: options.method || "GET",
       headers: headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
-    if (!res.ok) {
+${spec.auth && spec.auth.type === "oauth2" ? `    // Access token expired? Renew it once and try again.
+    if (res.status === 401 && await refreshAccessToken()) {
+      headers.Authorization = "Bearer " + accessToken;
+      res = await fetch(url, {
+        method: options.method || "GET",
+        headers: headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+    }
+` : ""}    if (!res.ok) {
       throw new Error(${JSON.stringify(spec.name)} + " replied " + res.status + " " + res.statusText);
     }
     const text = await res.text();
     if (!text) return null;
     try { return JSON.parse(text); } catch (e) { return text; }
+  }
+`;
+
+  /**
+   * Helpers written into every generic adapter.
+   *
+   * `pick` walks a dotted path, because interesting values are often buried
+   * ("traits.OnOff.on"). `fill` substitutes {id} and {value} through a request
+   * body, so an action can put your number where the API expects it rather than
+   * only in the URL.
+   */
+  const helpersCode = `
+  function pick(obj, path) {
+    if (!path) return undefined;
+    // A path is a list of keys. Real-world keys contain dots of their own
+    // ("sdm.devices.traits.Info"), so a plain string is only ever one key.
+    const segments = Array.isArray(path) ? path : [path];
+    return segments.reduce(function (acc, key) {
+      return acc == null ? undefined : acc[key];
+    }, obj);
+  }
+
+  function fill(template, ctx) {
+    if (typeof template === "string") {
+      return template.replace(/\{(id|value)\}/g, function (_, key) { return ctx[key]; });
+    }
+    if (Array.isArray(template)) return template.map(function (t) { return fill(t, ctx); });
+    if (template && typeof template === "object") {
+      const out = {};
+      for (const key of Object.keys(template)) out[key] = fill(template[key], ctx);
+      return out;
+    }
+    // A bare {value} placeholder keeps the caller's real type (number/boolean).
+    return template;
   }
 `;
 
@@ -189,9 +275,10 @@ ${requestCode(spec)}
     const actionCases = Object.entries(spec.actions)
       .map(([action, def]) => `
     if (action === ${JSON.stringify(action)}) {
-      await request(${JSON.stringify(def.path)}.replace("{id}", encodeURIComponent(thing.id)).replace("{value}", encodeURIComponent(value)), {
+      const ctx = { id: thing.id, value: value };
+      await request(fill(${JSON.stringify(def.path)}, { id: encodeURIComponent(thing.id), value: encodeURIComponent(value) }), {
         method: ${JSON.stringify(def.method || "POST")},
-        body: ${def.body ? JSON.stringify(def.body) : "undefined"},
+        body: ${def.body ? `fill(${JSON.stringify(def.body)}, ctx)` : "undefined"},
       });
       return { done: ${JSON.stringify(action)}, thing: thing.name, value: value };
     }`)
@@ -199,33 +286,64 @@ ${requestCode(spec)}
 
     return `/* ${spec.name} adapter — written by Eve, ${nowStamp()}.
  *
- * Generated from the API description you gave her. Credentials are supplied at
- * compile time as config.token and never written into this source.
+ * Generated from the API's own description. Credentials are supplied at compile
+ * time as config.token and are never written into this source.
  */
-${requestCode(spec)}
+${requestCode(spec)}${helpersCode}
   async function probe() {
     await request(${JSON.stringify(spec.listPath)});
     return { ok: true, detail: ${JSON.stringify(spec.name)} + " answered" };
   }
 
+  /** Pull one page of things out of whatever shape the payload arrives in. */
+  function itemsFrom(payload) {
+    const raw = ${spec.itemsKey ? `pick(payload, ${JSON.stringify(spec.itemsKey)})` : "payload"};
+    if (Array.isArray(raw)) return raw;
+    // Some APIs key their collection by id instead of returning an array.
+    if (raw && typeof raw === "object") {
+      return Object.keys(raw).map(function (key) {
+        const item = raw[key];
+        return (item && typeof item === "object") ? Object.assign({ _key: key }, item) : { _key: key, value: item };
+      });
+    }
+    return [];
+  }
+
+  function normalise(item) {
+    const id = pick(item, ${JSON.stringify(spec.idKey)});
+    const name = pick(item, ${JSON.stringify(spec.nameKey)});
+    return {
+      id: id != null ? id : item._key,
+      name: String(name != null ? name : (id != null ? id : item._key)),
+      domain: ${JSON.stringify(spec.id)},
+      state: pick(item, ${JSON.stringify(spec.stateKey)}),
+      controllable: true,
+      attributes: item,
+    };
+  }
+
   async function list() {
-    const payload = await request(${JSON.stringify(spec.listPath)});
-    const items = ${spec.itemsKey ? `payload[${JSON.stringify(spec.itemsKey)}] || []` : `Array.isArray(payload) ? payload : []`};
-    return items.map(function (item) {
-      return {
-        id: item[${JSON.stringify(spec.idKey)}],
-        name: item[${JSON.stringify(spec.nameKey)}] || String(item[${JSON.stringify(spec.idKey)}]),
-        domain: ${JSON.stringify(spec.id)},
-        state: item[${JSON.stringify(spec.stateKey)}],
-        controllable: true,
-        attributes: item,
-      };
-    });
+    let payload = await request(${JSON.stringify(spec.listPath)});
+    let things = itemsFrom(payload).map(normalise);
+${spec.nextKey ? `
+    // Follow pagination links, with a hard stop so a broken API cannot spin.
+    let next = pick(payload, ${JSON.stringify(spec.nextKey)});
+    let pages = 0;
+    while (next && pages++ < 20) {
+      payload = await request(next);
+      things = things.concat(itemsFrom(payload).map(normalise));
+      next = pick(payload, ${JSON.stringify(spec.nextKey)});
+    }
+` : ""}    return things;
   }
 
   async function act(action, thing, value) {
     if (!thing) throw new Error("Which one? I could not match that to anything.");
 ${actionCases}
+    if (action === "query_state") {
+      const current = (await list()).filter(function (t) { return t.id === thing.id; })[0];
+      return { done: "query_state", thing: thing.name, state: current ? current.state : "unknown" };
+    }
     throw new Error("This adapter cannot '" + action + "'.");
   }
 

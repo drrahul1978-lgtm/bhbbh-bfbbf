@@ -255,6 +255,83 @@ her write the adapter again, `--retrain-language` retrains the classifier.
 - **Nothing is sent anywhere else.** Eve talks to your Home Assistant and to
   nothing else — no telemetry, no cloud, no third party.
 
+## Working out an API on her own
+
+Earlier, a human had to translate an API into her spec format. `discover.js`
+removes that step where it can, in three tiers — and it reports which tier got
+there, so you always know how much to trust the result.
+
+**Tier 1 — ask the API to describe itself.** Most modern REST services publish an
+OpenAPI/Swagger document at a predictable path (`/openapi.json`, `/swagger.json`,
+`/v3/api-docs`, and eight more she tries). If one is there she reads it, works out
+the auth scheme, picks the endpoint that lists things, and identifies which
+endpoints turn things on, off and set a level — then fetches a real page from
+that endpoint to pin down the field names. No human involved.
+
+**Tier 2 — study what comes back.** No published description? She calls the
+likely endpoints and reads the actual JSON, scoring every field on how much it
+looks like an id, a display name, or a state. Values buried in nested objects
+are found too. Heuristics, so: often right, not always.
+
+**Tier 3 — the web.** Only when the first two fail *and* there is a connection.
+She searches for a published spec document, fetches the candidates, and validates
+each as OpenAPI — so a wrong search result fails safely rather than producing a
+confidently wrong adapter.
+
+```bash
+node eve-connect.js --api http://192.168.1.50:9000 --token XXX --list
+node eve-connect.js --api http://192.168.1.50:9000 --token XXX --chat
+node eve-connect.js --api ... --offline        # never touch the web
+node eve-connect.js --api ... --rediscover     # work it out again from scratch
+```
+
+```
+🔍 I have never seen http://192.168.1.50:9000 before. Working out what it is…
+   · found the API's own description at /openapi.json (Widget Hub)
+   · read 2 things from /widgets and worked out its fields
+✅ Worked it out via openapi (confidence 100%).
+✍️  Wrote a 107-line adapter → eve-skills/widget_hub.js
+```
+
+### Field paths are lists of keys, not dotted strings
+
+A detail worth knowing, because it bit during development: real APIs have keys
+that *contain dots*. Google's device traits are literally named
+`sdm.devices.traits.Info`. So a path like `traits.sdm.devices.traits.Info.customName`
+is unresolvable by splitting on dots. Paths are arrays of keys throughout —
+`["traits", "sdm.devices.traits.Info", "customName"]` — and the tests cover
+exactly that shape.
+
+### What she still cannot do
+
+- **Read prose documentation.** If an API describes itself only in English, tier 1
+  finds nothing and tier 2 is guessing from shapes. That gap needs a language
+  model, not more training.
+- **Negotiate OAuth from cold.** She can *use* OAuth and refresh an expiring token
+  (`auth: { type: "oauth2" }` with a refresh token and token URL), but she cannot
+  walk through a consent screen for you.
+- **Infer semantics nobody stated.** If an endpoint's purpose is not in its path,
+  summary or operation id, she will not invent one — she lists it under
+  "still unsure about" and leaves it alone.
+
+## Offline, and the web
+
+The Pi case is treated as normal, not degraded:
+
+- **Everything is cached.** A discovered API's description is written to
+  `eve-skills/specs/<id>.json` and the generated adapter to `eve-skills/<id>.js`.
+  Once she has worked an API out, she never needs the internet for it again.
+- **Local network ≠ internet.** Tiers 1 and 2 only talk to the API itself, so they
+  work on a LAN with no WiFi uplink. Only tier 3 needs the outside world.
+- **No connection is a stated result, not a hang.** Every request is time-limited,
+  and if there is no internet she says so and explains that everything she tried
+  ran on the local network alone.
+- **`--offline` skips the web entirely**, for a Pi you would rather keep sealed.
+
+Web search is best-effort by design: it assumes no search-API key and scrapes a
+plain HTML endpoint, so it works often rather than always. Pass
+`--search-url 'https://your-engine/?q={q}'` to point it at something better.
+
 ## Teaching her a different API
 
 `Skills.restSpec()` describes any REST service, and she writes the adapter the
