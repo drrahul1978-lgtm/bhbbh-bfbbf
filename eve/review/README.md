@@ -78,3 +78,44 @@ Every test here runs against a stand-in reviewer. The Groq request shape —
 endpoint, auth header, `response_format: json_object` — is written from the
 documented API but **has not been exercised against the real service**, because
 this machine has no key. First real call is the thing to watch.
+
+---
+
+## What a correction leaves behind
+
+A correction that only fixes one answer is worth very little. Settling a case
+produces two different things, and keeping them separate is the whole point.
+
+### A regression test — for the fact
+
+`eve/learn/regression.js` turns a settled correction into a test that checks
+**both directions**: the right answer must appear, *and* the wrong one must not.
+An answer that hedges — "it might be 8321, or possibly 8123" — has not been
+fixed, and is failed.
+
+Rephrasings of the question are generated and replayed too, so a fix that only
+works for the exact original wording is reported as **`passed_narrowly`** rather
+than as passing. That distinction is the difference between learning something
+and memorising a string.
+
+Only human-settled corrections become tests. A correct answer has nothing to
+guard against; a case marked wrong with no correct answer stated cannot be
+tested against; and an unconfirmed machine opinion is not a fact.
+
+### A lesson — for the habit
+
+When the same error type recurs, `LessonBook` records a change of **method**,
+not a fact. The scope field is literally `"method"`, and the wording follows:
+*"Check the version on a documentation page before trusting it"* survives as a
+lesson; *"Home Assistant uses port 8123"* is a fact and belongs in a regression
+test instead.
+
+A lesson is only marked applied when you name what actually changed. Agreeing
+with a lesson is not applying it, and `markApplied()` refuses an empty note.
+
+### The honest limit
+
+EVE has no language model of her own, so the "related tests" she generates are
+rephrasings — real, and worth having, but not new concepts. Genuinely related
+questions need you or a model to write, and every related test records
+`writtenBy` so the distinction never quietly blurs.
