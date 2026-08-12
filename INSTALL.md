@@ -71,6 +71,43 @@ On Linux, a Pi or a Mac, `./eve.sh` does the same thing.
 
 ---
 
+## Putting her on your desktop
+
+Double-click **`Add EVE to my desktop.cmd`** once. You get an EVE icon on the
+desktop and an entry in the Start Menu, both starting her from a double-click
+like any other application.
+
+Elsewhere — Linux, a Raspberry Pi, a Mac — run:
+
+```bash
+npm run shortcut
+```
+
+The shortcut *points at this folder* rather than copying anything into it, so
+nothing is installed and nothing is duplicated. Move the folder later and the
+shortcut breaks; run it again and it is fixed.
+
+---
+
+## Putting her on a phone's home screen
+
+Her eye is a proper web app, so a phone can hold it like an installed one:
+
+1. On the Pi (or the PC), start her with the camera-capable address:
+   `node eve-proxy.js --https`
+2. On the phone, open `https://<the machine's address>:8080/eye.html` and accept
+   the certificate warning once.
+3. **iPhone:** Share → *Add to Home Screen*. **Android:** ⋮ → *Add to Home
+   screen* / *Install app*.
+
+She then opens full-screen from the home screen, with no browser bar.
+
+> The `--https` matters. A phone's browser will not hand over the camera to a
+> plain `http://` address that is not `localhost`, so without it she opens but
+> cannot see. That is the browser's rule, not hers.
+
+---
+
 ## Linux — the installer
 
 Linux is the one platform that can build its own installer, because the `.deb`
