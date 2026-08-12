@@ -1,0 +1,6 @@
+# Adapters Eve writes for herself at runtime — she regenerates these on demand,
+# and they are specific to your own network addresses.
+eve-skills/
+
+node_modules/
+*.log

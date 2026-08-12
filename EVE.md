@@ -1,10 +1,12 @@
 # 🧠 Eve — an AI built from scratch
 
 Eve is a neural network written from nothing: no TensorFlow, no PyTorch, no ONNX,
-no pretrained weights, no API key, no server. Four plain JavaScript files, about
-1,200 lines, running on your own machine — including a Raspberry Pi 4.
+no pretrained weights, no API key, no server. A handful of plain JavaScript
+files running on your own machine — including a Raspberry Pi 4.
 
-She grades trading cards: centering, corners, edges and surface, 1–10 each.
+She grades trading cards: centering, corners, edges and surface, 1–10 each. She
+also understands spoken-style requests and writes her own adapters for APIs she
+has never met — see the second half of this document.
 
 ```
 ┌──────────┐   ┌───────────┐   ┌────────┐   ┌────────────┐
@@ -21,7 +23,10 @@ She grades trading cards: centering, corners, edges and surface, 1–10 each.
 | `synth.js` | Draws practice cards with known damage — Eve's endless supply of labelled data. |
 | `eve.js` | Eve herself: grading, memory, and the loop that keeps her improving. |
 | `eve-train.js` | Command-line trainer. Runs headless on a Pi. |
-| `train.html` | The studio: watch her learn, test her, correct her. |
+| `intent.js` | Her second brain: the same network pointed at words, so she can tell what you are asking for. |
+| `skills.js` | The code generator. Turns a description of an API into a working adapter she writes herself. |
+| `eve-connect.js` | Command line for talking to your smart home from a Pi. |
+| `train.html` | The studio: watch her learn, test her, correct her, and watch her write code. |
 
 ## Is she really mine?
 
@@ -157,5 +162,122 @@ npm test          # or: node test/nn.test.js && node test/vision.test.js && …
   that a saved model reloads bit-for-bit.
 - `test/eve.test.js` — checks grading output, and that a losing round is
   genuinely rolled back rather than merely unrecorded.
+- `test/intent.test.js` — checks she understands phrasings she was never trained
+  on, never confuses "on" with "off", and admits when she does not know.
+- `test/skills.test.js` — stands up a fake Home Assistant and checks the adapter
+  she writes speaks the real protocol.
+- `test/connect.test.js` — runs the Raspberry Pi command line end to end.
 - `test/pipeline.test.js` — the end-to-end proof: draw cards, train, and beat a
   guess-the-average baseline on cards never seen.
+
+---
+
+# 🔌 Connecting Eve to Home Assistant
+
+Ask Eve to connect to something she has never spoken to, and she writes the code
+for it herself.
+
+```
+you › connect to home assistant
+Eve › I don't have code for Home Assistant yet. Writing it now…
+      Done — I wrote a 107-line adapter for the Home Assistant REST API.
+      It's shown below; your token is not in it.
+Eve › Connected to Pi House 2026.8.0. I can see 34 entities and control 19.
+
+you › turn on the kitchen light
+Eve › Done — Kitchen Light: turn on.
+```
+
+## What "writes her own code" means here — precisely
+
+This is the part where it would be easy to oversell, so here is the exact line.
+
+**She does:** hold a description of an API (base URL, how it authenticates,
+which endpoint lists things, which endpoints act on them), and from that
+*generate real JavaScript* — around 110 lines for Home Assistant — save it to a
+file, load it, and run it. The code is written at the moment you ask, for the
+address you gave, and you can read every line of it before it runs. Nothing is
+downloaded. It is genuinely new code that did not exist in this repository.
+
+**She does not:** read prose documentation and work out an API unaided, or
+invent programs from an arbitrary description. That takes a large language
+model; Eve is a few thousand weights. Anyone claiming otherwise about a network
+this size is selling something.
+
+So: **code generation from a machine-readable description, plus a learned
+classifier that decides when to do it.** That is a real, useful, honest form of
+"adapting herself" — and it covers Home Assistant and most REST APIs.
+
+## Understanding what you asked
+
+`intent.js` is Eve's second brain — the same `nn.js` network, pointed at words.
+Sentences are hashed into a bag of words *and word pairs* (because "turn on" and
+"turn off" share every word but one), and classified into intents she has skills
+for. It scores 100% on held-out phrasings she was never trained on, and answers
+"unknown" rather than guessing when a request is nonsense.
+
+Device names are matched against whatever your system actually reports, so it
+adapts to your house with no retraining: "kitchen counter light" correctly beats
+"kitchen light" when both exist.
+
+## On a Raspberry Pi (the recommended way)
+
+The browser can talk to Home Assistant only if you add the site to
+`http.cors_allowed_origins` in `configuration.yaml`. The command line has no such
+restriction, which makes the Pi the natural home for this:
+
+```bash
+# a long-lived access token: HA → your profile → Security → Long-lived tokens
+export HA_URL=http://homeassistant.local:8123
+export HA_TOKEN=eyJhbGciOi...
+
+node eve-connect.js --list                    # what can she see?
+node eve-connect.js "turn off the porch light"
+node eve-connect.js --chat                    # keep talking
+node eve-connect.js --show-code               # read what she wrote
+```
+
+First run writes `eve-skills/home_assistant.js` and caches the language model to
+`eve-intent.json`; later runs load both and start instantly. `--rewrite` makes
+her write the adapter again, `--retrain-language` retrains the classifier.
+
+## Security, plainly
+
+- **Your token is never written into generated code.** It is supplied separately
+  when the adapter is compiled, so the code she writes can be read, exported or
+  committed without leaking anything. The tests assert this.
+- **Generated code is executed.** It comes from the generator in `skills.js` and
+  is shown to you before it runs — but it *is* executed, so treat an adapter file
+  the way you would treat any script: if you did not generate it, read it first.
+- **A token controls your house.** Anyone with it can unlock what your Home
+  Assistant can unlock. Keep it on your own machine, prefer an environment
+  variable to a shell argument, and revoke it in Home Assistant if it leaks.
+- **Nothing is sent anywhere else.** Eve talks to your Home Assistant and to
+  nothing else — no telemetry, no cloud, no third party.
+
+## Teaching her a different API
+
+`Skills.restSpec()` describes any REST service, and she writes the adapter the
+same way:
+
+```js
+const spec = Skills.restSpec({
+  id: "lamps", name: "My Lamp API",
+  baseUrl: "http://192.168.1.50:9000",
+  auth: { type: "bearer" },          // or { type: "header", header: "X-API-Key" }
+  listPath: "/lamps", idKey: "id", nameKey: "label", stateKey: "power",
+  actions: { turn_on: { method: "POST", path: "/lamps/{id}/on" } },
+});
+const skill = Skills.buildSkill(spec, { token: "…" });
+console.log(skill.source);          // the code she just wrote
+await skill.adapter.list();
+```
+
+## What is tested
+
+`npm test` runs a fake Home Assistant and checks the code she writes actually
+works against it — correct service paths, correct JSON bodies, the auth header,
+brightness vs. temperature, reading state back, and clean failures on a bad
+token or an unknown device. `test/connect.test.js` runs the real command line
+end to end: first contact writes the adapter, plain English changes a device,
+questions change nothing, and nonsense is refused.

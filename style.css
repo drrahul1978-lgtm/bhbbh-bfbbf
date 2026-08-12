@@ -446,3 +446,83 @@ code {
 
 .header-actions { display: flex; gap: 10px; align-items: center; }
 .header-actions a { text-decoration: none; }
+
+/* Chat with Eve */
+.chat-log {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 120px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px;
+  margin: 14px 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-msg.you {
+  align-self: flex-end;
+  background: rgba(255, 203, 5, 0.14);
+  border: 1px solid rgba(255, 203, 5, 0.3);
+}
+.chat-msg.eve {
+  align-self: flex-start;
+  background: rgba(61, 125, 202, 0.12);
+  border: 1px solid rgba(61, 125, 202, 0.3);
+}
+.chat-msg.eve.thinking { opacity: 0.7; font-style: italic; }
+.chat-input-row { display: flex; gap: 10px; }
+.chat-input-row input {
+  flex: 1;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  font-family: inherit;
+}
+.chat-input-row input:focus { outline: 2px solid var(--accent-2); border-color: transparent; }
+
+.connect-form {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--accent-2);
+  border-radius: 12px;
+}
+.connect-form h4 { margin-bottom: 6px; font-size: 0.98rem; }
+.connect-form .field-row { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.connect-form .field-row.right { align-items: flex-end; }
+.connect-form label { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; }
+.connect-form input {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+}
+
+.skill-code {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+  max-height: 340px;
+  overflow: auto;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #a9b6d8;
+}
+#skillCodeWrap h4 { margin-top: 18px; font-size: 0.98rem; }

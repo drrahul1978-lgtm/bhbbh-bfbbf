@@ -21,9 +21,15 @@ pretrained weights, and runs happily on a **Raspberry Pi 4**.
 See **[EVE.md](EVE.md)** for how she works, what she can and cannot do, and how to
 train her from the command line.
 
+She can also **connect to your smart home**. Ask her to connect to Home
+Assistant and she writes the adapter herself — real JavaScript, generated for
+your address, shown to you before it runs — then controls your devices from
+plain English. Details and the honest limits are in **[EVE.md](EVE.md)**.
+
 ```bash
 npm test                    # verify the maths, the learning and the pipeline
 node eve-train.js --watch   # keep improving her on a Pi, forever
+node eve-connect.js --chat  # talk to your house from the Pi's command line
 ```
 
 ## How it works

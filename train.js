@@ -478,3 +478,165 @@ $("resetModel").addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 boot();
 drawSamples();
+
+// ---------------------------------------------------------------------------
+// Chat — talk to Eve, and watch her write code for new APIs
+// ---------------------------------------------------------------------------
+let intentNet = null;
+let haSkill = null;     // { adapter, source, spec }
+let haThings = [];
+
+function chatSay(text, who = "eve", thinking = false) {
+  const div = document.createElement("div");
+  div.className = `chat-msg ${who}${thinking ? " thinking" : ""}`;
+  div.textContent = text;
+  $("chatLog").appendChild(div);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  return div;
+}
+
+/** Her language model: load the shipped one instantly, else train in-page. */
+async function ensureIntentNet() {
+  if (intentNet) return intentNet;
+  try {
+    const res = await fetch("eve-intent.json", { cache: "no-store" });
+    if (res.ok) {
+      intentNet = Intent.fromJSON(await res.json());
+      if (intentNet) return intentNet;
+    }
+  } catch { /* fall through to training */ }
+  const note = chatSay("Give me a moment — learning to understand you…", "eve", true);
+  await Eve.yieldToUI();
+  intentNet = Intent.train().net;
+  note.remove();
+  return intentNet;
+}
+
+/** Reload a previously written skill (source only — the token is asked for). */
+function restoreSkillSource() {
+  const saved = Skills.loadSkills().find((s) => s.spec.id === "home_assistant");
+  return saved || null;
+}
+
+function showSkillCode(source) {
+  $("skillCode").textContent = source;
+  $("skillCodeWrap").classList.remove("hidden");
+}
+
+async function connectHomeAssistant(url, token) {
+  const spec = Skills.homeAssistantSpec(url);
+  const existing = restoreSkillSource();
+  let source;
+
+  if (existing && existing.source.includes(JSON.stringify(spec.baseUrl))) {
+    source = existing.source;
+    chatSay("I already wrote code for this one — reusing my adapter.");
+  } else {
+    const note = chatSay("I don't have code for Home Assistant yet. Writing it now…", "eve", true);
+    await Eve.yieldToUI();
+    source = Skills.generateAdapter(spec);
+    note.remove();
+    chatSay(`Done — I wrote a ${source.trim().split("\n").length}-line adapter for the Home Assistant REST API. It's shown below; your token is not in it.`);
+  }
+  showSkillCode(source);
+
+  const adapter = Skills.compile(source, { token });
+  const info = await adapter.probe();
+  haSkill = { adapter, source, spec };
+  Skills.saveSkill({ spec, source, writtenAt: new Date().toISOString(), lines: source.trim().split("\n").length });
+
+  haThings = await adapter.list();
+  const controllable = haThings.filter((t) => t.controllable).length;
+  chatSay(`Connected to ${info.detail}. I can see ${haThings.length} entities and control ${controllable} of them. Ask me to list devices, or just tell me what to switch.`);
+}
+
+async function handleChat(text) {
+  chatSay(text, "you");
+  const net = await ensureIntentNet();
+  const understood = Intent.understand(net, text, haThings);
+
+  try {
+    if (understood.intent === "unknown") {
+      chatSay(`I didn't follow that. I can grade cards, train myself, and — once connected — control your smart home: "turn on the kitchen light", "list devices", "is the fan on".`);
+      return;
+    }
+
+    if (understood.intent === "connect") {
+      $("connectForm").classList.remove("hidden");
+      const existing = restoreSkillSource();
+      chatSay(existing
+        ? "I've written this adapter before — enter the address and token below and I'll reuse or update it."
+        : "I can teach myself the Home Assistant API. Give me the address and a long-lived access token below, and I'll write the adapter and show you the code before using it.");
+      $("haUrl").focus();
+      return;
+    }
+
+    if (understood.intent === "grade_card") {
+      chatSay("Drop a photo in section 3️⃣ above and I'll grade it.");
+      return;
+    }
+
+    if (!haSkill) {
+      chatSay(`That sounds like a device request, but I'm not connected to anything yet. Say "connect to home assistant" and I'll write the code for it.`);
+      return;
+    }
+
+    if (understood.intent === "list_devices") {
+      const controllable = haThings.filter((t) => t.controllable);
+      const lines = controllable.slice(0, 25).map((t) => `• ${t.name} — ${t.state}`);
+      if (controllable.length > 25) lines.push(`…and ${controllable.length - 25} more`);
+      chatSay(lines.length ? `Here's what I can control:\n${lines.join("\n")}` : "I connected, but found nothing I can control.");
+      return;
+    }
+
+    if (!understood.thing) {
+      chatSay(`I understood "${understood.intent.replace(/_/g, " ")}" but couldn't match a device. Say the name as it appears when I list devices.`);
+      return;
+    }
+
+    const result = await haSkill.adapter.act(understood.intent, understood.thing, understood.number);
+    if (result.done === "query_state") {
+      chatSay(`${result.thing} is ${result.state}.`);
+    } else {
+      chatSay(`Done — ${result.thing}: ${result.done.replace(/_/g, " ")}${result.value != null ? ` ${result.value}` : ""}.`);
+    }
+    haThings = await haSkill.adapter.list();
+  } catch (err) {
+    chatSay(`That didn't work: ${err.message}`, "eve");
+  }
+}
+
+$("chatSend").addEventListener("click", () => {
+  const text = $("chatInput").value.trim();
+  if (!text) return;
+  $("chatInput").value = "";
+  handleChat(text);
+});
+$("chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("chatSend").click();
+});
+
+$("haConnect").addEventListener("click", async () => {
+  const url = $("haUrl").value.trim();
+  const token = $("haToken").value.trim();
+  if (!url || !token) {
+    chatSay("I need both the address and a token to connect.");
+    return;
+  }
+  $("haConnect").disabled = true;
+  try {
+    await connectHomeAssistant(url, token);
+    $("connectForm").classList.add("hidden");
+  } catch (err) {
+    chatSay(`I couldn't connect: ${err.message} — if this is the browser, it may be CORS; add this site to http.cors_allowed_origins in Home Assistant's configuration.yaml, or run "node eve-connect.js" on the Pi instead, which has no CORS at all.`);
+  } finally {
+    $("haConnect").disabled = false;
+  }
+});
+
+// Show any previously written skill's code on load, and greet.
+(() => {
+  const existing = restoreSkillSource();
+  if (existing) showSkillCode(existing.source);
+  chatSay(`Hi — I'm Eve. Try "connect to home assistant", or grade a card above.`);
+})();

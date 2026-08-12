@@ -153,9 +153,56 @@
       </div>
     </section>
 
+    <!-- Talk to her / adaptive skills -->
+    <section class="card panel">
+      <h2>4️⃣ Talk to her — and watch her write code</h2>
+      <p class="hint">
+        Eve understands a small set of requests through a second network trained on
+        phrases (see <code>intent.js</code>). Ask her to connect to
+        <strong>Home Assistant</strong> and she writes the adapter herself — real
+        JavaScript, generated from the API's description, shown below before it runs.
+        Honest limits: she recognises requests she has a skill for; she is not a
+        chatbot and cannot program arbitrary things from a description.
+      </p>
+
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder='Try: "connect to home assistant" or "list devices"…' autocomplete="off" />
+        <button id="chatSend" class="primary-btn small">Send</button>
+      </div>
+
+      <!-- Shown when she needs connection details -->
+      <div id="connectForm" class="connect-form hidden">
+        <h4>🔌 Connecting to Home Assistant</h4>
+        <p class="hint">
+          The token stays in this browser and is never written into the code she
+          generates. Browser note: your Home Assistant must allow this site under
+          <code>http.cors_allowed_origins</code> — or skip CORS entirely by using
+          <code>node eve-connect.js</code> on the Pi itself.
+        </p>
+        <div class="field-row">
+          <label for="haUrl">Address</label>
+          <input type="text" id="haUrl" placeholder="http://homeassistant.local:8123" spellcheck="false" />
+        </div>
+        <div class="field-row">
+          <label for="haToken">Long-lived access token</label>
+          <input type="password" id="haToken" placeholder="From your HA profile → Security" autocomplete="off" />
+        </div>
+        <div class="field-row right">
+          <button id="haConnect" class="primary-btn small">Write the adapter &amp; connect</button>
+        </div>
+      </div>
+
+      <!-- The code she wrote -->
+      <div id="skillCodeWrap" class="hidden">
+        <h4>📜 The code she wrote for this</h4>
+        <pre class="skill-code" id="skillCode"></pre>
+      </div>
+    </section>
+
     <!-- Model management -->
     <section class="card panel">
-      <h2>4️⃣ Her brain is a file</h2>
+      <h2>5️⃣ Her brain is a file</h2>
       <p class="hint">
         Eve's weights are just numbers. Export them, copy them to a Raspberry Pi, keep
         training there with <code>node eve-train.js --watch</code>, and bring them back.
@@ -186,6 +233,8 @@
   <script src="vision.js"></script>
   <script src="synth.js"></script>
   <script src="eve.js"></script>
+  <script src="intent.js"></script>
+  <script src="skills.js"></script>
   <script src="train.js"></script>
 </body>
 </html>
