@@ -1,0 +1,16 @@
+{
+  "name": "grademycard",
+  "version": "1.0.0",
+  "description": "AI trading card grader — plus Eve, a neural network built from scratch that trains in your browser or on a Raspberry Pi.",
+  "private": true,
+  "scripts": {
+    "test": "node test/nn.test.js && node test/eve.test.js && node test/pipeline.test.js",
+    "test:fast": "node test/nn.test.js && node test/eve.test.js",
+    "train": "node eve-train.js",
+    "train:watch": "node eve-train.js --watch",
+    "train:pi": "node eve-train.js --watch --cards 800 --epochs 120",
+    "serve": "python3 -m http.server 8000"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

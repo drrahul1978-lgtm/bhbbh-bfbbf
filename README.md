@@ -6,6 +6,26 @@ subgrades plus an overall 1–10 grade — powered by **Meta's Llama 4 vision mo
 
 **Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/
 
+## Two graders, one site
+
+| | 🃏 The cloud grader | 🧠 Eve |
+|---|---|---|
+| Model | Meta's Llama 4 vision, via an API | A network built from scratch, ~15,000 weights |
+| Needs | An API key + internet | Nothing at all |
+| Accuracy on real cards | Much better | Rough — she learns from the cards you correct |
+| Who owns it | Meta / the provider | You |
+
+Eve lives at **[train.html](train.html)** — train her, test her, teach her, export
+her brain as a file. She is written in plain JavaScript with no libraries and no
+pretrained weights, and runs happily on a **Raspberry Pi 4**.
+See **[EVE.md](EVE.md)** for how she works, what she can and cannot do, and how to
+train her from the command line.
+
+```bash
+npm test                    # verify the maths, the learning and the pipeline
+node eve-train.js --watch   # keep improving her on a Pi, forever
+```
+
 ## How it works
 
 1. Open the site — it works out of the box using the site's built-in shared
@@ -57,7 +77,9 @@ It is not a professional grade. For official grading use PSA, BGS, SGC or CGC.
 
 ## Development
 
-It's a plain static site (`index.html`, `style.css`, `app.js`) — no build step.
+It's a plain static site — no build step, no dependencies. The cloud grader is
+`index.html` + `app.js`; Eve is `nn.js`, `vision.js`, `synth.js`, `eve.js` and
+`train.html`.
 Open `index.html` in a browser, or serve it with `python3 -m http.server`.
 Deployment to GitHub Pages happens automatically via the workflow in
 `.github/workflows/deploy.yml`.

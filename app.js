@@ -8,6 +8,16 @@
 const DEFAULT_API_KEY = ["gsk_wsOxkJf5K0wcelFxMBcRW", "Gdyb3FYc87XOHn7cElCPjQqcbNEZ67G"].join("");
 
 const PROVIDERS = {
+  // Eve is not a provider at all — she is the network in eve.js, running here,
+  // on this device, with no key and no request. Kept in this list so she can be
+  // picked from the same menu as the cloud models.
+  eve: {
+    name: "Eve",
+    local: true,
+    endpoint: null,
+    defaultModel: "eve (built from scratch, trained by you)",
+    keyHelp: 'No key, no network, no provider — Eve runs on this device. <a href="train.html">Train her here</a>.',
+  },
   groq: {
     name: "Groq",
     endpoint: "https://api.groq.com/openai/v1/chat/completions",
@@ -83,12 +93,20 @@ const els = {
 let imageDataUrl = null;
 
 // ---------- settings ----------
+/** Eve needs no model name and no key, so those fields are hidden for her. */
+function syncProviderUI() {
+  const isLocal = !!PROVIDERS[els.provider.value]?.local;
+  els.model.parentElement.classList.toggle("hidden", isLocal);
+  els.apiKey.parentElement.classList.toggle("hidden", isLocal);
+  els.keyHelp.innerHTML = PROVIDERS[els.provider.value].keyHelp;
+}
+
 function loadSettings() {
   const provider = localStorage.getItem("gmc_provider") || "groq";
   els.provider.value = provider;
   els.model.value = localStorage.getItem("gmc_model") || PROVIDERS[provider].defaultModel;
   els.apiKey.value = localStorage.getItem("gmc_api_key") || "";
-  els.keyHelp.innerHTML = PROVIDERS[provider].keyHelp;
+  syncProviderUI();
 }
 
 function saveSettings() {
@@ -102,7 +120,7 @@ function saveSettings() {
 
 els.provider.addEventListener("change", () => {
   els.model.value = PROVIDERS[els.provider.value].defaultModel;
-  els.keyHelp.innerHTML = PROVIDERS[els.provider.value].keyHelp;
+  syncProviderUI();
 });
 els.settingsBtn.addEventListener("click", () => els.settingsPanel.classList.toggle("hidden"));
 els.saveSettings.addEventListener("click", saveSettings);
@@ -172,9 +190,85 @@ function extractJson(text) {
   return JSON.parse(match[0]);
 }
 
+/** Decode the uploaded photo into raw pixels for Eve to measure. */
+function imageDataFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Cap the working size so a Raspberry Pi stays quick; card damage is
+      // still clearly visible at this resolution.
+      const MAX = 700;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    };
+    img.onerror = () => reject(new Error("Could not read that image."));
+    img.src = url;
+  });
+}
+
+/** Grade with Eve — entirely offline. */
+async function gradeWithEve() {
+  const saved = Eve.loadModel();
+  let net = saved?.net;
+  let origin = "your Eve, trained in this browser";
+
+  if (!net) {
+    // Fall back to the Eve shipped with the site.
+    const res = await fetch("eve-model.json", { cache: "no-store" }).catch(() => null);
+    if (!res || !res.ok) {
+      throw new Error('Eve has not been trained yet — open "🧠 Meet Eve" and train her first.');
+    }
+    const file = await res.json();
+    if (file.featureCount !== Vision.FEATURE_COUNT) {
+      throw new Error('The bundled Eve does not match this version — retrain her on the "🧠 Meet Eve" page.');
+    }
+    net = NN.Net.fromJSON(file.net);
+    origin = `the Eve shipped with this site (${(file.stats?.cardsSeen || 0).toLocaleString()} cards studied)`;
+  }
+
+  const image = await imageDataFromUrl(imageDataUrl);
+  const result = Eve.grade(net, image);
+  const stats = saved?.stats;
+
+  renderResults({
+    card_name: "Graded by Eve",
+    card_set: origin,
+    card_type: "other",
+    centering: result.centering,
+    corners: result.corners,
+    edges: result.edges,
+    surface: result.surface,
+    overall_grade: result.overall,
+    grade_label: result.label,
+    confidence: stats?.bestMAE ? `±${stats.bestMAE.toFixed(2)} grade points on her practice set` : "unmeasured",
+    observations: result.observations,
+  });
+}
+
 async function gradeCard() {
   const providerId = localStorage.getItem("gmc_provider") || els.provider.value;
   const provider = PROVIDERS[providerId] || PROVIDERS.groq;
+
+  if (provider.local) {
+    els.gradeBtn.disabled = true;
+    els.results.classList.add("hidden");
+    setStatus("Eve is measuring borders, corners, edges & surface…", false, true);
+    try {
+      await gradeWithEve();
+      setStatus("");
+    } catch (err) {
+      setStatus(`❌ ${err.message}`, true);
+    } finally {
+      updateGradeButton();
+    }
+    return;
+  }
+
   const model = (localStorage.getItem("gmc_model") || provider.defaultModel).trim();
   let apiKey = (localStorage.getItem("gmc_api_key") || els.apiKey.value).trim();
   if (!apiKey && providerId === "groq") apiKey = DEFAULT_API_KEY;

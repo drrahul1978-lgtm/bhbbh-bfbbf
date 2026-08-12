@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eve — your own AI, trained from scratch</title>
+  <meta name="description" content="Train Eve, a neural network built from scratch that grades trading cards entirely in your browser — no API, no libraries, no cloud." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <header class="site-header">
+    <div class="logo">
+      <span class="logo-icon">🧠</span>
+      <span class="logo-text">Eve<span class="accent">.</span></span>
+    </div>
+    <a class="ghost-btn" href="index.html">🃏 Back to the grader</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Your own AI.<br /><span class="accent">Built from nothing.</span></h1>
+      <p class="subtitle">
+        Eve is a neural network with no libraries behind her, no pretrained weights and no
+        cloud. She lives in this browser tab, learns from cards drawn on this page, and
+        gets a little better every round — and you can watch her do it.
+      </p>
+    </section>
+
+    <!-- Live status -->
+    <section class="card panel">
+      <div class="eve-status">
+        <div class="eve-brain">
+          <canvas id="brainCanvas" width="320" height="200" aria-label="Diagram of Eve's network"></canvas>
+        </div>
+        <div class="eve-numbers">
+          <div class="stat">
+            <div class="stat-value" id="statMae">–</div>
+            <div class="stat-label">grade points off</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="statGen">0</div>
+            <div class="stat-label">generations</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="statCards">0</div>
+            <div class="stat-label">cards studied</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="statCorrections">0</div>
+            <div class="stat-label">your corrections</div>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="modelOrigin">Looking for Eve…</p>
+    </section>
+
+    <!-- Training -->
+    <section class="card panel">
+      <h2>1️⃣ Teach her</h2>
+      <p class="hint">
+        Every round draws brand-new practice cards with damage Eve has never seen, trains
+        on them, then tests her against a fixed set she is never trained on. New weights
+        are kept <strong>only if that score improves</strong> — otherwise they are thrown
+        away. So the line below can only go down.
+      </p>
+
+      <div class="train-controls">
+        <button id="trainOnceBtn" class="primary-btn small">▶️ Train one round</button>
+        <button id="trainForeverBtn" class="primary-btn small">♾️ Keep improving</button>
+        <button id="stopBtn" class="ghost-btn" disabled>⏹ Stop</button>
+      </div>
+
+      <div class="field-row inline">
+        <label for="effort">Effort per round</label>
+        <select id="effort">
+          <option value="pi">🍓 Raspberry Pi (60 cards · 15 epochs)</option>
+          <option value="balanced" selected>⚖️ Balanced (150 cards · 25 epochs)</option>
+          <option value="desktop">🖥️ Desktop (400 cards · 40 epochs)</option>
+        </select>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="status-msg" id="trainStatus">Idle.</p>
+      </div>
+
+      <canvas id="lossCanvas" class="loss-canvas" width="700" height="220" aria-label="Eve's error over time"></canvas>
+
+      <div class="subgrades" id="perKeyBars">
+        <div class="subgrade" data-key="centering"><div class="subgrade-top"><span>📐 Centering</span><span class="subgrade-value">–</span></div><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="subgrade" data-key="corners"><div class="subgrade-top"><span>📍 Corners</span><span class="subgrade-value">–</span></div><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="subgrade" data-key="edges"><div class="subgrade-top"><span>📏 Edges</span><span class="subgrade-value">–</span></div><div class="bar"><div class="bar-fill"></div></div></div>
+        <div class="subgrade" data-key="surface"><div class="subgrade-top"><span>✨ Surface</span><span class="subgrade-value">–</span></div><div class="bar"><div class="bar-fill"></div></div></div>
+      </div>
+      <p class="hint">Bars show how close Eve gets on each category — fuller is better.</p>
+    </section>
+
+    <!-- What she practises on -->
+    <section class="card panel">
+      <h2>2️⃣ See what she studies</h2>
+      <p class="hint">
+        Eve cannot learn from an empty folder, so the page draws her practice cards: pick
+        the flaws first, paint them, and the correct grade is known by construction. Every
+        card below is generated in your browser and has never existed before.
+      </p>
+      <div class="sample-strip" id="sampleStrip"></div>
+      <button id="redrawSamples" class="ghost-btn">🎲 Draw new practice cards</button>
+    </section>
+
+    <!-- Try her -->
+    <section class="card panel">
+      <h2>3️⃣ Try her on a real card</h2>
+      <p class="hint">This runs entirely offline — no key, no network, no provider. Just Eve.</p>
+      <div id="testDrop" class="drop-zone" tabindex="0">
+        <input type="file" id="testFile" accept="image/*" hidden />
+        <div id="testPlaceholder">
+          <div class="drop-icon">🧠</div>
+          <p><strong>Click, drag &amp; drop, or paste</strong> a card photo for Eve to grade</p>
+        </div>
+        <img id="testPreview" class="preview hidden" alt="Card being graded by Eve" />
+      </div>
+
+      <div id="eveResult" class="hidden">
+        <div class="results-header">
+          <div>
+            <h3>Eve's read</h3>
+            <p class="card-meta" id="eveMeta"></p>
+          </div>
+          <div class="grade-badge">
+            <div class="grade-number" id="eveGrade">–</div>
+            <div class="grade-label" id="eveLabel">GRADE</div>
+          </div>
+        </div>
+        <ul class="eve-notes" id="eveNotes"></ul>
+
+        <div class="correction">
+          <h4>👩‍🏫 Teach her the right answer</h4>
+          <p class="hint">
+            Disagree? Set the real grades and save it. Corrections are replayed in every
+            future round, weighted four times heavier than practice cards — this is how Eve
+            learns <em>your</em> cards and your camera.
+          </p>
+          <div id="correctionSliders"></div>
+          <button id="saveCorrection" class="primary-btn small">💾 Save correction</button>
+          <span class="hint" id="correctionMsg"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model management -->
+    <section class="card panel">
+      <h2>4️⃣ Her brain is a file</h2>
+      <p class="hint">
+        Eve's weights are just numbers. Export them, copy them to a Raspberry Pi, keep
+        training there with <code>node eve-train.js --watch</code>, and bring them back.
+      </p>
+      <div class="train-controls">
+        <button id="exportModel" class="ghost-btn">⬇️ Export Eve</button>
+        <button id="importModelBtn" class="ghost-btn">⬆️ Import Eve</button>
+        <input type="file" id="importModel" accept="application/json" hidden />
+        <button id="exportCorrections" class="ghost-btn">⬇️ Export my corrections</button>
+        <button id="resetModel" class="ghost-btn danger">🗑️ Start her over</button>
+      </div>
+      <p class="status-msg" id="fileStatus"></p>
+    </section>
+
+    <div class="disclaimer">
+      ⚠️ Eve is a small network trained mostly on cards this page draws for her. She is
+      genuinely yours and genuinely learning, but she is not a professional grader and is
+      far less capable than the big vision model on the main page. Treat her as a fun
+      second opinion — and teach her with real corrections to make her better at your cards.
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Eve · a neural network written from scratch — no libraries, no API, no data leaves this device.</p>
+  </footer>
+
+  <script src="nn.js"></script>
+  <script src="vision.js"></script>
+  <script src="synth.js"></script>
+  <script src="eve.js"></script>
+  <script src="train.js"></script>
+</body>
+</html>

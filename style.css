@@ -282,3 +282,167 @@ main {
 @media (max-width: 560px) {
   .results-header { flex-direction: column-reverse; align-items: center; text-align: center; }
 }
+
+/* ===========================================================================
+   Eve — the studio where the from-scratch model is trained
+   =========================================================================== */
+
+.eve-status {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.eve-brain {
+  flex: 1 1 300px;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+}
+.eve-brain canvas { width: 100%; height: auto; display: block; }
+
+.eve-numbers {
+  flex: 1 1 260px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.stat {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.stat-value {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.train-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0;
+}
+.ghost-btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+.ghost-btn:disabled, .primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.field-row.inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.field-row.inline label { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; }
+.field-row.inline select {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.progress-wrap { margin: 6px 0 14px; }
+.progress {
+  height: 8px;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  transition: width 0.2s linear;
+}
+
+.loss-canvas {
+  width: 100%;
+  height: auto;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 8px 0 18px;
+}
+
+.sample-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 6px 2px 12px;
+}
+.sample { flex: 0 0 auto; text-align: center; }
+.sample-card {
+  width: 104px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  image-rendering: auto;
+}
+.sample figcaption { font-size: 0.75rem; color: var(--text-dim); margin-top: 6px; }
+.sample figcaption strong { color: var(--accent); font-size: 0.95rem; }
+
+.eve-notes {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 18px;
+}
+.eve-notes li {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: rgba(61, 125, 202, 0.08);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+
+.correction {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 8px;
+}
+.correction h4 { font-size: 0.98rem; margin-bottom: 6px; }
+.slider-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 0.88rem;
+}
+.slider-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+.slider-row output { font-weight: 700; text-align: right; }
+
+code {
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+}
+
+@media (max-width: 560px) {
+  .eve-numbers { grid-template-columns: repeat(2, 1fr); }
+  .slider-row { grid-template-columns: 110px 1fr 38px; }
+}
+
+.header-actions { display: flex; gap: 10px; align-items: center; }
+.header-actions a { text-decoration: none; }

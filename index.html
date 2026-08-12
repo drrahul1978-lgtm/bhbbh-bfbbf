@@ -19,7 +19,10 @@
       <span class="logo-icon">🃏</span>
       <span class="logo-text">Grade<span class="accent">My</span>Card</span>
     </div>
-    <button id="settingsBtn" class="ghost-btn" title="API settings">⚙️ API Settings</button>
+    <div class="header-actions">
+      <a class="ghost-btn" href="train.html" title="Train your own AI">🧠 Meet Eve</a>
+      <button id="settingsBtn" class="ghost-btn" title="API settings">⚙️ API Settings</button>
+    </div>
   </header>
 
   <main>
@@ -43,6 +46,7 @@
       <div class="field-row">
         <label for="provider">Provider</label>
         <select id="provider">
+          <option value="eve">🧠 Eve — my own AI (offline, no key)</option>
           <option value="groq">Groq (free tier — recommended)</option>
           <option value="openrouter">OpenRouter</option>
           <option value="together">Together AI</option>
@@ -133,9 +137,13 @@
   </main>
 
   <footer class="site-footer">
-    <p>Built with 🃏 + 🦙 Llama 4 vision · Your photos &amp; API key never leave your browser except to call the AI provider directly.</p>
+    <p>Built with 🃏 + 🦙 Llama 4 vision, and 🧠 <a href="train.html">Eve</a> — a network built from scratch that runs with no network at all.</p>
   </footer>
 
+  <script src="nn.js"></script>
+  <script src="vision.js"></script>
+  <script src="synth.js"></script>
+  <script src="eve.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
