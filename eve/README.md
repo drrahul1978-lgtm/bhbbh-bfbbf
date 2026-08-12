@@ -105,3 +105,47 @@ The honest note on Phase 3: EVE's own networks classify, they do not write novel
 code. `config.model` is the seam where a language model plugs in for the
 generative steps, left empty deliberately — with nothing configured she uses
 deterministic template generation and says so, rather than pretending to reason.
+
+---
+
+## Phase 2 — the skill system
+
+```
+eve/skills/
+├── sandbox.js        static inspection, isolated context, separate-process runner
+├── isolate-runner.js the far side of the process boundary
+├── registry.js       versions, install gating, rollback, performance, A/B
+└── pipeline.js       generate → inspect → test → verify → install → remember
+```
+
+### Three rules the registry enforces
+
+**A version cannot be installed until it has passed a test.** "It compiled" is
+not evidence that it works, and `install()` refuses anything still in `draft` or
+`failed`.
+
+**The last known-good version is never destroyed.** Installing supersedes; it
+does not delete. There is always something to roll back to, and rollback records
+why it happened.
+
+**A replacement must earn its place.** `compare()` refuses to decide on fewer
+than 20 runs each, adopts only on a meaningful gain in success rate, and lets
+speed decide only when reliability is level. Newer is not a reason.
+
+### Integrity
+
+Each version's source is hashed when registered and checked before loading. A
+file damaged by a power cut, a failing card, or an edit no longer matches what
+was tested — `loadCurrent()` refuses it and says to roll back or re-test rather
+than running code that was never verified.
+
+### What "verified" means in the pipeline
+
+The pipeline will not install an adapter that connects but finds nothing. A
+working integration has to have listed something real from your actual service.
+`connected and listed 9 things in 240ms` is evidence; `the code compiled` is not,
+and the audit ledger will not accept the latter as verification.
+
+Untrusted code is exercised in a **separate process** first — empty environment,
+hard timeout, killed on overrun — because a brand-new adapter has never run
+before and the first run is exactly when it might do something stupid.
