@@ -1,0 +1,27 @@
+[package]
+name = "eve"
+version = "1.0.0"
+description = "EVE — a neural network built from scratch, running entirely on your device"
+authors = ["EVE"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "eve_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+
+[profile.release]
+# A desktop app that does its thinking in JavaScript does not need a large
+# binary. Optimise for size and strip what is not needed.
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

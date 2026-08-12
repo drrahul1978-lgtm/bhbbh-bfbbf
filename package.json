@@ -1,7 +1,7 @@
 {
   "name": "grademycard",
   "version": "1.0.0",
-  "description": "AI trading card grader \u2014 plus Eve, a neural network built from scratch that trains in your browser or on a Raspberry Pi, and writes her own API adapters.",
+  "description": "AI trading card grader — plus Eve, a neural network built from scratch that trains in your browser or on a Raspberry Pi, and writes her own API adapters.",
   "private": true,
   "scripts": {
     "test": "node test/kernel.test.js && node test/platform.test.js && node test/external.test.js && node test/vision-eye.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/memory.test.js && node test/capabilities.test.js && node test/nn.test.js && node test/eve.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/pipeline.test.js && node test/proxy.test.js && node test/integration.test.js",
@@ -18,8 +18,13 @@
     "test:pi": "node test/pi-readiness.test.js",
     "test:integration": "node test/integration.test.js",
     "start": "node eve-proxy.js",
-    "drives": "node -e \"const e=require('./eve/platform/external.js');console.log(e.describe());console.log(JSON.stringify(e.resolveSources(),null,2))\""
+    "drives": "node -e \"const e=require('./eve/platform/external.js');console.log(e.describe());console.log(JSON.stringify(e.resolveSources(),null,2))\"",
+    "icon": "node tools/make-icon.js",
+    "dist": "node tools/build-dist.js",
+    "app": "npm run icon && npm run dist && tauri build",
+    "app:dev": "npm run icon && npm run dist && tauri dev"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
 }
