@@ -13,7 +13,12 @@
  *
  * Secrets are never written into the generated source. Tokens are supplied when
  * the code is compiled, so an adapter can be displayed, exported or committed
- * without leaking credentials. */
+ * without leaking credentials.
+ *
+ * On Node, compiled adapters run inside eve/skills/sandbox.js — a context with
+ * no process, no require and a network function that enforces a host allowlist.
+ * In the browser they run with the page's authority, which is why the studio
+ * shows you the source before anything executes. */
 (function (root) {
   "use strict";
 
@@ -365,7 +370,25 @@ ${actionCases}
    * the studio shows it to you first. `config` carries the secrets so they stay
    * out of the source.
    */
-  function compile(source, config, fetchImpl) {
+  function compile(source, config, fetchImpl, options = {}) {
+    // Node: run it in a sandbox with no host globals, so an adapter cannot
+    // reach process.env and read the token that opens your front door.
+    // The browser has no equivalent, and falls back below.
+    const Sandbox = root.EveSandbox || (typeof require !== "undefined" ? require("./eve/skills/sandbox.js") : null);
+    if (Sandbox) {
+      return Sandbox.compile(source, {
+        config: config || {},
+        fetchImpl,
+        allowedHosts: options.allowedHosts || [],
+        timeoutMs: options.timeoutMs || 10000,
+        onRequest: options.onRequest || null,
+      });
+    }
+
+    // Browser fallback. There is no vm module here, so this is the old
+    // behaviour: the adapter runs with the page's own authority. Acceptable
+    // because a page has no filesystem and no environment variables — but it
+    // is why the studio shows you the code before running it.
     const factory = new Function("config", "fetch", source);
     const adapter = factory(config || {}, fetchImpl || (typeof fetch !== "undefined" ? fetch : null));
     for (const method of ["probe", "list", "act"]) {
