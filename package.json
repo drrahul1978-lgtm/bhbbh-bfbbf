@@ -4,8 +4,8 @@
   "description": "AI trading card grader \u2014 plus Eve, a neural network built from scratch that trains in your browser or on a Raspberry Pi, and writes her own API adapters.",
   "private": true,
   "scripts": {
-    "test": "node test/kernel.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/nn.test.js && node test/eve.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/pipeline.test.js",
-    "test:fast": "node test/kernel.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js",
+    "test": "node test/kernel.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/memory.test.js && node test/nn.test.js && node test/eve.test.js && node test/intent.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/pipeline.test.js",
+    "test:fast": "node test/kernel.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/memory.test.js",
     "train": "node eve-train.js",
     "train:watch": "node eve-train.js --watch",
     "train:pi": "node eve-train.js --watch --cards 800 --epochs 120",
