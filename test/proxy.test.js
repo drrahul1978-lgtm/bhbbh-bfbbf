@@ -132,6 +132,54 @@ const get = (url) => fetch(url).then(async (r) => ({ status: r.status, body: awa
     child2.kill("SIGKILL");
     ok("a server with no key says so and points at Eve, rather than failing obscurely");
 
+    // ---- the limits that actually protect the bill ----
+    // A leaked address should cost a capped amount and then stop.
+    let refusedAt = null;
+    for (let i = 0; i < 12; i++) {
+      const r = await fetch(`http://127.0.0.1:${port}/api/grade`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+      });
+      if (r.status === 429) { refusedAt = i; assert.ok(r.headers.get("retry-after"), "a refusal should say when to come back"); break; }
+    }
+    assert.ok(refusedAt !== null, "the rate limit must eventually refuse");
+    const callsBefore = seen.length;
+    await fetch(`http://127.0.0.1:${port}/api/grade`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+    });
+    assert.strictEqual(seen.length, callsBefore, "a refused request must not reach the provider, or it costs money anyway");
+    ok(`the rate limit refuses after ${refusedAt + 1} rapid requests, before spending anything`);
+
+    const refusedBody = await fetch(`http://127.0.0.1:${port}/api/grade`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+    }).then((r) => r.json());
+    assert.match(refusedBody.error, /Eve can grade in the meantime/);
+    ok("someone who hits the limit is pointed at Eve rather than simply blocked");
+
+    // ---- an app token, when set, keeps strangers out entirely ----
+    const tokenPort = port + 2;
+    const guarded = execFile("node", [proxyFile, "--port", String(tokenPort), "--app-token", "my-app-token"], {
+      cwd: ROOT,
+      env: { ...process.env, EVE_SECRET_GROQ_API_KEY: KEY, EVE_DATA_DIR: path.join(tmp, "guarded") },
+    });
+    for (let i = 0; i < 60; i++) {
+      try { await get(`http://127.0.0.1:${tokenPort}/api/health`); break; } catch { await new Promise((r) => setTimeout(r, 100)); }
+    }
+    const stranger = await fetch(`http://127.0.0.1:${tokenPort}/api/grade`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+    });
+    assert.strictEqual(stranger.status, 401, "a client without the token must be refused");
+    const mine = await fetch(`http://127.0.0.1:${tokenPort}/api/grade`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Eve-App": "my-app-token" },
+      body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+    });
+    assert.strictEqual(mine.status, 200, "a client with the token must be served");
+    guarded.kill("SIGKILL");
+    ok("with an app token set, only your own client is served");
+
     console.log(`\neve-proxy: ${passed} tests passed`);
   } finally {
     stop();

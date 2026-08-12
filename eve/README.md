@@ -185,6 +185,49 @@ asserts it is in the outbound request and in nothing the browser downloads.
 *before* the filesystem — and answers 403 whether or not the file exists, so the
 refusal itself discloses nothing.
 
+### Can the key be hidden in a distributed app?
+
+No — and the reason rules out every approach that looks promising, so it is
+worth stating once rather than rediscovering.
+
+Your app has to *send* the key. Anyone running it can point a local proxy at
+their own machine and read the outgoing `Authorization` header. Where the key
+was stored stops mattering at that point.
+
+| Approach | What it actually buys |
+|---|---|
+| Split or obfuscated strings | Seconds |
+| Encrypted key in the app | The decryption key ships with it |
+| Compiled `.exe`, native binary, WASM | `strings` on the binary, or read the traffic |
+| Windows Credential Manager / DPAPI | Real protection from *other users* of that PC — but your app decrypts it to use it, so that user can |
+| Certificate pinning | Stops third-party interception, not the person running the app |
+
+A key on a machine **you** control is safe. A key inside anything you **hand to
+someone else** is public. That is structural.
+
+### Moving the key here moves the risk — it does not remove it
+
+Nobody can read the key from the proxy. But anyone who learns the address can
+still spend the quota it protects, without ever seeing the credential. So the
+endpoint is defended in its own right:
+
+```bash
+node eve-proxy.js --per-minute 6 --per-day 200
+EVE_APP_TOKEN=something-long node eve-proxy.js    # refuse clients that are not yours
+```
+
+Limits are checked **before** the provider is called, so a refused request costs
+nothing — tested. Someone who hits the limit is pointed at Eve, who has no limit
+because she runs on their own machine.
+
+The app token is honest about what it is: it ships with your app, so it is
+extractable exactly like a key would be. The difference is that it buys an
+attacker your rate limit rather than your provider account, and you can change
+it in one place when it leaks.
+
+Set the limits to what you are willing to pay for. That number, not the secrecy
+of the key, is what actually caps the bill.
+
 ### The reviewer is invisible
 
 Grading answers the visitor first; the reviewer runs afterwards, on a separate

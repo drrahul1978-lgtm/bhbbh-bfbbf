@@ -19,6 +19,16 @@
  *   node eve-proxy.js --no-review      skip the background reviewer
  *
  * The key comes from the vault: EVE_SECRET_GROQ_API_KEY, or eve-data/secrets.json.
+ *
+ * MOVING THE KEY HERE MOVES THE RISK, IT DOES NOT REMOVE IT.
+ *
+ * Nobody can read the key now — but anyone who learns this server's address can
+ * still spend the quota it protects, without ever seeing the credential. So the
+ * endpoint is defended in its own right: a per-address rate limit, a daily
+ * ceiling, and optionally a shared app token that clients must present.
+ *
+ * The limits are what actually protects the bill. Set them to what you are
+ * willing to pay for.
  */
 "use strict";
 
@@ -38,6 +48,11 @@ const flag = (name, fallback) => {
 const PORT = parseInt(flag("port", process.env.PORT || "8080"), 10);
 const REVIEW = !args.includes("--no-review");
 
+/* What you are prepared to pay for. A leaked address costs you this much and
+ * then stops, rather than costing you everything overnight. */
+const PER_MINUTE = parseInt(flag("per-minute", process.env.EVE_RATE_PER_MINUTE || "6"), 10);
+const PER_DAY = parseInt(flag("per-day", process.env.EVE_RATE_PER_DAY || "200"), 10);
+
 const eve = kernel.boot({ confirm: null });   // no interactive human behind a web request
 const log = eve.log;
 
@@ -50,6 +65,47 @@ const hasKey = () => eve.vault.has(GRADING_SECRET);
  * what it finds, and is never mentioned to the visitor. */
 const cases = new CaseStore({ file: path.join(eve.config.dataDir, "cases.json"), log, privacy: "disputed_exchange_only" });
 const evaluator = new Evaluator({ transport: makeGroqTransport({ vault: eve.vault }), log });
+
+/**
+ * A shared token clients must send, if you set one.
+ *
+ * Worth being clear about what this is and is not. It stops a stranger who
+ * finds the address from using it. It does NOT stay secret from someone who has
+ * your app — it ships with the app, so it is extractable exactly like a key
+ * would be. The difference is that this token buys them your rate limit rather
+ * than your provider account, and you can change it in one place when it leaks.
+ */
+const APP_TOKEN = flag("app-token", process.env.EVE_APP_TOKEN || null);
+
+/* Requests per address, in memory — bounded so a flood cannot exhaust the Pi. */
+const buckets = new Map();
+const DAY_MS = 86400000;
+
+function rateCheck(address) {
+  const now = Date.now();
+  let bucket = buckets.get(address);
+  if (!bucket) {
+    if (buckets.size > 5000) buckets.clear();   // a Pi will not hold an unbounded table
+    bucket = { minute: [], day: [], firstSeen: now };
+    buckets.set(address, bucket);
+  }
+  bucket.minute = bucket.minute.filter((t) => now - t < 60000);
+  bucket.day = bucket.day.filter((t) => now - t < DAY_MS);
+
+  if (bucket.minute.length >= PER_MINUTE) {
+    return { allowed: false, retryAfter: 60, why: `more than ${PER_MINUTE} grades a minute from one address` };
+  }
+  if (bucket.day.length >= PER_DAY) {
+    return { allowed: false, retryAfter: 3600, why: `the daily limit of ${PER_DAY} grades for this address` };
+  }
+  bucket.minute.push(now);
+  bucket.day.push(now);
+  return { allowed: true, usedToday: bucket.day.length };
+}
+
+/** Behind a router or reverse proxy the socket address is not the client. */
+const addressOf = (req) =>
+  (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || "unknown";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
@@ -145,6 +201,19 @@ const server = http.createServer(async (req, res) => {
     if (!hasKey()) {
       return send(503, { error: "This server has no grading key configured, so use Eve — she needs none." });
     }
+    if (APP_TOKEN && req.headers["x-eve-app"] !== APP_TOKEN) {
+      log.warn("a request without the app token was refused", { from: addressOf(req) });
+      return send(401, { error: "This server is not open to the public." });
+    }
+
+    // The limit is what protects the bill, so it is checked before any work.
+    const limit = rateCheck(addressOf(req));
+    if (!limit.allowed) {
+      log.warn("rate limit reached", { from: addressOf(req), why: limit.why });
+      res.setHeader("Retry-After", String(limit.retryAfter));
+      return send(429, { error: `Slow down — you have hit ${limit.why}. Eve can grade in the meantime, with no limit at all.` });
+    }
+
     try {
       const { image } = JSON.parse(await readBody(req));
       if (!image || !image.startsWith("data:image/")) return send(400, { error: "send an image" });
@@ -183,6 +252,8 @@ server.listen(PORT, () => {
   console.log(`   ${eve.describe()}`);
   console.log(`   cloud grading: ${hasKey() ? "on — the key stays on this machine" : "off — set EVE_SECRET_GROQ_API_KEY to enable it"}`);
   console.log(`   background reviewer: ${REVIEW && evaluator.available() ? "on, and invisible to visitors" : "off"}`);
+  console.log(`   limits: ${PER_MINUTE}/minute and ${PER_DAY}/day per address${APP_TOKEN ? ", app token required" : ""}`);
+  if (!APP_TOKEN) console.log(`   (set EVE_APP_TOKEN to refuse clients that are not yours)`);
   console.log(`\n   Visitors need no key, no account and no settings.\n`);
 });
 
