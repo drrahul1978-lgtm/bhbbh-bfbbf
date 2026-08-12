@@ -45,6 +45,7 @@ const flag = (name, fallback) => {
 };
 const PORT = parseInt(flag("port", process.env.PORT || "8080"), 10);
 const REVIEW = !args.includes("--no-review");
+const OPEN = args.includes("--open");
 
 /* What you are prepared to pay for. A leaked address costs you this much and
  * then stops, rather than costing you everything overnight. */
@@ -236,6 +237,27 @@ const server = HTTPS
   ? https.createServer(certificate(eve.config.dataDir), handler)
   : http.createServer(handler);
 
+/**
+ * Open the default browser at a URL, for the double-click launchers.
+ *
+ * Failing to open a browser is not a reason to stop serving — on a headless Pi
+ * there is no browser to open, and the server is still doing its job. So this
+ * reports and carries on rather than throwing.
+ */
+function openBrowser(url) {
+  const [cmd, cmdArgs] =
+    process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
+    : process.platform === "darwin" ? ["open", [url]]
+    : ["xdg-open", [url]];
+  try {
+    const child = require("child_process").spawn(cmd, cmdArgs, { detached: true, stdio: "ignore" });
+    child.on("error", () => console.log(`   (could not open a browser — go to ${url} yourself)`));
+    child.unref();
+  } catch {
+    console.log(`   (could not open a browser — go to ${url} yourself)`);
+  }
+}
+
 server.listen(PORT, () => {
   log.info(`serving on port ${PORT}`, { grading: "local", reviewer: REVIEW });
   const scheme = HTTPS ? "https" : "http";
@@ -257,6 +279,7 @@ server.listen(PORT, () => {
     console.log(`\n   Reaching this from another machine: your browser will warn about the`);
     console.log(`   certificate. Accept it once and the camera will work.\n`);
   }
+  if (OPEN) openBrowser(`${scheme}://localhost:${PORT}/eye.html`);
 });
 
 process.on("SIGINT", () => { eve.shutdown(); server.close(() => process.exit(0)); });

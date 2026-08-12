@@ -49,18 +49,25 @@ origin, and a Raspberry Pi on your network is not one.
 
 ---
 
-## Windows — without installing anything
+## Windows — right now, without waiting for a build
 
-If you would rather not run an unsigned installer:
+This needs no installer, no CI and no unsigned `.exe`, and it reaches every
+feature the desktop app does.
 
-1. Install [Node.js](https://nodejs.org) (the LTS installer).
+1. Install [Node.js](https://nodejs.org) — the LTS installer, click through it.
 2. Copy this folder to the PC.
-3. `node eve-proxy.js`
-4. Open `http://localhost:8080/eye.html`
+3. **Double-click `EVE.cmd`.**
 
-`localhost` counts as a secure origin, so the camera works here too. Chrome and
-Edge will also offer **⋮ → Install**, which gives you a Start Menu entry without
-an installer ever being involved.
+She starts and your browser opens on her eye. Leave the black window open;
+closing it stops her. If Node is missing, `EVE.cmd` says so and opens the
+download page rather than failing with a stack trace.
+
+`localhost` counts as a secure origin, so the camera works here — which is the
+whole reason the desktop app exists. Chrome and Edge will also offer
+**⋮ → Cast, save and share → Install page as app**, giving you a Start Menu
+entry and its own window without an installer ever being involved.
+
+On Linux, a Pi or a Mac, `./eve.sh` does the same thing.
 
 ---
 
