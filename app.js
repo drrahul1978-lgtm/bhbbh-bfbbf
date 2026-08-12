@@ -247,8 +247,19 @@ async function gradeWithEve() {
     origin = `the Eve shipped with this site (${(file.stats?.cardsSeen || 0).toLocaleString()} cards studied)`;
   }
 
+  // A second Eve and the judge, if the site ships them — then they debate it.
+  if (self.debateReady) await self.debateReady;
+  let second = null;
+  try {
+    const res = await fetch("eve-model-two.json", { cache: "no-store" });
+    if (res.ok) {
+      const file = await res.json();
+      if (file.featureCount === Vision.FEATURE_COUNT) second = NN.Net.fromJSON(file.net);
+    }
+  } catch { /* one Eve is fine */ }
+
   const image = await imageDataFromUrl(imageDataUrl);
-  const result = Eve.grade(net, image);
+  const result = Eve.grade(net, image, second);
   const stats = saved?.stats;
 
   renderResults({
@@ -261,7 +272,9 @@ async function gradeWithEve() {
     surface: result.surface,
     overall_grade: result.overall,
     grade_label: result.label,
-    confidence: stats?.bestMAE ? `±${stats.bestMAE.toFixed(2)} grade points on her practice set` : "unmeasured",
+    confidence: result.transcript
+      ? `${Math.round(result.confidence * 100)}% — ${result.needsHuman ? "her two readings disagree on " + result.unresolved.join(" and ") : "her two readings agree"}`
+      : (stats?.bestMAE ? `±${stats.bestMAE.toFixed(2)} grade points on her practice set` : "unmeasured"),
     observations: result.observations,
   });
 }

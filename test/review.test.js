@@ -8,7 +8,6 @@ const path = require("path");
 
 const { Evaluator, findPatterns, ERROR_TYPES } = require("../eve/review/evaluator.js");
 const { CaseStore, VERDICTS, PRIVACY, applyPrivacy } = require("../eve/review/cases.js");
-const { makeGroqTransport } = require("../eve/review/groq.js");
 const { Vault } = require("../eve/kernel/vault.js");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "eve-review-"));
@@ -23,22 +22,14 @@ const fakeTransport = (reply) => ({
 });
 
 (async () => {
-  // ---------------------------------------------- the quarantine
+  // ------------------------------------- no cloud reviewer exists any more
   //
-  // The rule this enforces has been narrowed deliberately, and it is worth
-  // being precise about what it now protects.
+  // This used to police where Groq was allowed to appear. It now asserts
+  // something simpler and stronger: there is no cloud reviewer in the project
+  // at all. No key, no account, no outbound request from any of it.
   //
-  // Originally: Groq appeared nowhere outside eve/review/, because it existed
-  // only to review finished work.
-  //
-  // Now the same provider also grades cards on the visitor's behalf, so that
-  // nobody has to supply a key. That is a request-time call, and it lives in
-  // eve-proxy.js — allowed below, by name, with this explanation.
-  //
-  // What has NOT changed is the invariant that mattered: the REVIEWER cannot
-  // influence an answer. It runs after the response has been sent, it is
-  // advisory, and it outranks nobody. Grading and reviewing are separate calls
-  // that happen to use the same provider — not one path feeding the other.
+  // What replaced it is local — two networks grading the same card and their
+  // disagreement becoming the confidence. See eve/debate/.
   const offenders = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -48,53 +39,29 @@ const fakeTransport = (reply) => ({
         walk(full);
       } else if (entry.name.endsWith(".js")) {
         const rel = path.relative(path.join(__dirname, ".."), full);
-        if (rel.startsWith(`eve${path.sep}review`) || rel.startsWith(`test${path.sep}`)) continue;
+        if (rel.startsWith(`test${path.sep}`)) continue;
         const body = fs.readFileSync(full, "utf8");
-        if (/groq/i.test(body) && !/GradeMyCard|grademycard/i.test(path.basename(full))) {
-          offenders.push(rel);
-        }
+        // app.js keeps a bring-your-own-key provider list, which holds no
+        // credential and only ever uses a key the user typed in themselves.
+        if (/api\.groq\.com|GROQ_API_KEY|groq_api_key/i.test(body) && rel !== "app.js") offenders.push(rel);
       }
     }
   };
   walk(path.join(__dirname, ".."));
-  // Files permitted to name a provider, each for a stated reason:
-  //   app.js       the browser-side provider list, which holds no credentials
-  //   eve-proxy.js grades on the visitor's behalf so they need no key
-  const ALLOWED = new Set(["app.js", "eve-proxy.js"]);
-  const realOffenders = offenders.filter((f) => !ALLOWED.has(f));
-  assert.deepStrictEqual(realOffenders, [],
-    `Groq must stay inside eve/review/. Found references in: ${realOffenders.join(", ")}`);
-  ok("Groq appears only in eve/review/ and the two files allowed to name it");
+  assert.deepStrictEqual(offenders, [],
+    `no file should reach for a cloud reviewer any more, but these do: ${offenders.join(", ")}`);
+  assert.ok(!fs.existsSync(path.join(__dirname, "..", "eve", "review", "groq.js")),
+    "the Groq transport should be gone, not merely unused");
+  ok("there is no cloud reviewer anywhere in the project — no key, no account, no request");
 
-  // The grading path must not import the reviewer, so a review can never end
-  // up in the reply. They share a provider, not a code path.
-  const proxySource = fs.readFileSync(path.join(__dirname, "..", "eve-proxy.js"), "utf8");
-  // Just the function body — the doc comment that follows it describes the
-  // reviewer, and would match on the word alone.
-  const gradeStart = proxySource.indexOf("async function gradeWithProvider");
-  const gradeSection = proxySource.slice(gradeStart, proxySource.indexOf("\n}", gradeStart));
-  assert.ok(!/evaluator|review/i.test(gradeSection), "grading must not touch the reviewer");
-  assert.ok(/setImmediate/.test(proxySource), "the reviewer must run after the response, not before it");
-  ok("grading never touches the reviewer, and the reviewer runs only after the answer has gone");
-
-  // No key configured means no transport, not a broken EVE.
-  assert.strictEqual(makeGroqTransport({ vault: new Vault({ env: {} }) }), null);
+  // The evaluator keeps its shape so a local model could be plugged in later,
+  // but nothing ships one, so it reports unavailable and EVE carries on.
   const evaluatorWithout = new Evaluator({ transport: null });
   assert.strictEqual(evaluatorWithout.available(), false);
   const noReview = await evaluatorWithout.review({ question: "q", answer: "a" });
   assert.strictEqual(noReview.available, false);
   assert.match(noReview.reason, /no external reviewer/);
-  ok("with no key configured EVE runs normally and simply reports no reviewer");
-
-  // The key is read from the vault and never appears in the prompt.
-  const vault = new Vault({ env: { EVE_SECRET_GROQ_API_KEY: "gsk_fake_key_value_1234567890" } });
-  const transport = makeGroqTransport({ vault, fetchImpl: async () => { throw new Error("network is off in tests"); } });
-  assert.ok(transport, "a configured key should produce a transport");
-  const evaluator = new Evaluator({ transport });
-  const unreachable = await evaluator.review({ question: "q", answer: "a" });
-  assert.strictEqual(unreachable.available, false);
-  assert.ok(!JSON.stringify(unreachable).includes("gsk_fake_key"), "an error must never carry the key");
-  ok("a reviewer that cannot be reached degrades to 'unavailable' without leaking the key");
+  ok("with nothing plugged in, the evaluator says so plainly instead of failing");
 
   // ---------------------------------------------- reviewing
   const good = new Evaluator({

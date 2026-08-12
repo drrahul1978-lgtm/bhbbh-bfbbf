@@ -178,7 +178,7 @@ const hub = http.createServer((req, res) => {
   // The external reviewer looks at finished work only.
   const evaluator = new Evaluator({
     transport: {
-      provider: "fake-groq",
+      provider: "fake-reviewer",
       async complete(system, user) {
         assert.match(user, /THE ANSWER SHE ALREADY GAVE/, "the reviewer must only see finished work");
         return JSON.stringify({

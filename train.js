@@ -12,6 +12,9 @@ const EFFORT = {
 };
 
 let trainer = null;
+/* The second opinion. Loaded alongside the first; when she is here the two of
+ * them argue it out and the disagreement becomes the confidence. */
+let secondEve = null;
 let stopRequested = false;
 let lastResult = null;
 let testFeatures = null;
@@ -323,7 +326,7 @@ function gradeWithEve(file) {
       $("testPreview").classList.remove("hidden");
       $("testPlaceholder").classList.add("hidden");
 
-      const result = Eve.grade(trainer.net, imageToData(img));
+      const result = Eve.grade(trainer.net, imageToData(img), secondEve);
       lastResult = result;
       testFeatures = result.features;
       renderEveResult(result);
@@ -475,7 +478,20 @@ $("resetModel").addEventListener("click", () => {
   $("fileStatus").textContent = "Eve has been reset.";
 });
 
+/** Fetch the second Eve, if this site ships one. Absence is not an error. */
+async function loadSecondEve() {
+  if (self.debateReady) await self.debateReady;
+  try {
+    const res = await fetch("eve-model-two.json", { cache: "no-store" });
+    if (!res.ok) return;
+    const file = await res.json();
+    if (file.featureCount !== Vision.FEATURE_COUNT) return;
+    secondEve = NN.Net.fromJSON(file.net);
+  } catch { /* one Eve is a perfectly good Eve */ }
+}
+
 // ---------------------------------------------------------------------------
+loadSecondEve();
 boot();
 drawSamples();
 

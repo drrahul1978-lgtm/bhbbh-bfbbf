@@ -8,8 +8,15 @@
  * It is advisory. A review never rewrites EVE, never installs anything, and
  * never outranks a human. Its output is filed on the case and waits.
  *
- * The provider is pluggable. Groq is one transport; anything with a
- * `complete(system, user)` method works, including a local model later.
+ * The provider is pluggable and NOTHING SHIPS ONE. There is no cloud reviewer
+ * in this project any more: no key, no account, no outbound request. The
+ * reviewer EVE actually uses is local — see eve/debate/, where two different
+ * methods grade the same card and their disagreement is resolved by evidence.
+ *
+ * This class stays because the shape is useful: anything with a
+ * `complete(system, user)` method can be plugged in later, including a model
+ * running on your own hardware. With none plugged in, `available()` is false
+ * and every call reports that plainly.
  */
 "use strict";
 

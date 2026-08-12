@@ -36,6 +36,11 @@ const VALIDATION = parseInt(flag("validation", "400"), 10);
 const WATCH = has("watch");
 const ROUNDS = parseInt(flag("rounds", WATCH ? "0" : "1"), 10); // 0 = forever
 const QUIET = has("quiet");
+// A second Eve has to be genuinely different, not the same net with a new seed:
+// different starting weights AND a different shape, so she makes different
+// mistakes. Two models that fail in the same places tell you nothing.
+const NET_SEED = parseInt(flag("net-seed", "20250811"), 10);
+const HIDDEN = flag("hidden", "64,32").split(",").map((n) => parseInt(n, 10));
 
 const log = (...m) => !QUIET && console.log(...m);
 const secs = (ms) => `${(ms / 1000).toFixed(1)}s`;
@@ -85,7 +90,7 @@ function main() {
     log(`  resuming from ${path.basename(OUT)}${existing.reason ? ` (${existing.reason})` : ""}`);
   } else {
     if (existing.reason && existing.reason !== "not present") log(`  ${path.basename(OUT)}: ${existing.reason}`);
-    net = new NN.Net([Vision.FEATURE_COUNT, 64, 32, Eve.KEYS.length], { seed: 20250811 });
+    net = new NN.Net([Vision.FEATURE_COUNT, ...HIDDEN, Eve.KEYS.length], { seed: NET_SEED });
     log("  starting from random weights");
   }
 
@@ -95,7 +100,8 @@ function main() {
   let generation = saved?.stats?.generation ?? 0;
   log(`  starting validation error: ${best.toFixed(3)} grade points\n`);
 
-  const trainRand = NN.mulberry32(Date.now() & 0xffff);
+  // The data draw follows the net seed too, so the two Eves see different cards.
+  const trainRand = NN.mulberry32((Date.now() ^ NET_SEED) & 0xffffffff);
   let round = 0;
 
   const runRound = () => {
