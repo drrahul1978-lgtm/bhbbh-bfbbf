@@ -34,9 +34,10 @@ node eve-connect.js --chat  # talk to your house from the Pi's command line
 
 ## How it works
 
-1. Open the site — it works out of the box using the site's built-in shared
-   Groq key (quota is shared by all visitors, so be considerate).
-2. Optional: use your own key instead via **⚙️ API Settings** — **Groq** is
+1. Open the site — it works immediately with **🧠 Eve**, who runs in your
+   browser with no key, no account and no network request at all.
+2. Optional: for the much stronger cloud model, add your own key via
+   **⚙️ API Settings** — **Groq** is
    recommended (free tier, no credit card):
    create one at [console.groq.com/keys](https://console.groq.com/keys).
    Your key is stored **only in your browser's localStorage** and sent directly

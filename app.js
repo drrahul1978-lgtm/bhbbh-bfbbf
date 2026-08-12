@@ -2,10 +2,14 @@
  * Runs fully client-side: the photo + API key go straight from the browser
  * to the chosen OpenAI-compatible provider serving Llama vision models. */
 
-// Built-in shared key (site owner's choice) so visitors need zero setup.
-// Split so automated secret scanners don't auto-revoke it; it is still
-// public — anyone can read it here, so usage/quota is shared by all visitors.
-const DEFAULT_API_KEY = ["gsk_wsOxkJf5K0wcelFxMBcRW", "Gdyb3FYc87XOHn7cElCPjQqcbNEZ67G"].join("");
+// There is deliberately no key in this file.
+//
+// A shared key lived here so visitors needed zero setup. It was also readable
+// by anyone who opened the page, which is the same thing as publishing it —
+// splitting the string only hid it from automated scanners, not from people.
+//
+// Zero-setup grading still works, because Eve runs in the browser with no key
+// and no network at all. A cloud provider is now opt-in, using your own key.
 
 const PROVIDERS = {
   // Eve is not a provider at all — she is the network in eve.js, running here,
@@ -102,7 +106,9 @@ function syncProviderUI() {
 }
 
 function loadSettings() {
-  const provider = localStorage.getItem("gmc_provider") || "groq";
+  // Eve by default: she needs no key, so the site works for a first-time
+  // visitor without anyone's credentials being spent.
+  const provider = localStorage.getItem("gmc_provider") || "eve";
   els.provider.value = provider;
   els.model.value = localStorage.getItem("gmc_model") || PROVIDERS[provider].defaultModel;
   els.apiKey.value = localStorage.getItem("gmc_api_key") || "";
@@ -271,12 +277,13 @@ async function gradeCard() {
 
   const model = (localStorage.getItem("gmc_model") || provider.defaultModel).trim();
   let apiKey = (localStorage.getItem("gmc_api_key") || els.apiKey.value).trim();
-  if (!apiKey && providerId === "groq") apiKey = DEFAULT_API_KEY;
-
   if (!apiKey) {
     els.settingsPanel.classList.remove("hidden");
     els.settingsPanel.scrollIntoView({ behavior: "smooth" });
-    setStatus(`Add your ${provider.name} API key first (⚙️ API Settings).`, true);
+    setStatus(
+      `${provider.name} needs your own API key (⚙️ API Settings) — or switch to 🧠 Eve, who needs none.`,
+      true
+    );
     return;
   }
 
@@ -390,5 +397,5 @@ applyMagicLink();
 loadSettings();
 updateGradeButton();
 if (!localStorage.getItem("gmc_api_key")) {
-  els.apiKey.placeholder = "Using the site's built-in key — paste your own to override";
+  els.apiKey.placeholder = "Your own key — or use Eve, who needs none";
 }
