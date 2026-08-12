@@ -72,7 +72,8 @@ class CaseStore {
     if (file) {
       const loaded = storage.readWithFallback(file, []);
       this.cases = Array.isArray(loaded.value) ? loaded.value : [];
-      if (!loaded.ok && loaded.reason) log?.warn(`review cases: ${loaded.reason}`);
+      // A missing file on first run is normal, not a problem worth warning about.
+      if (!loaded.ok && loaded.reason && loaded.reason !== "not present") log?.warn(`review cases: ${loaded.reason}`);
     }
   }
 

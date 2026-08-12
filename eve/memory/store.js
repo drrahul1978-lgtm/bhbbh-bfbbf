@@ -66,6 +66,12 @@ class Memory {
     this.items = [];              // long-term + procedural
     this.shortTerm = [];          // never persisted by default
     this.index = new Map();       // token → Set of memory ids
+    // Two lookup tables built at index time rather than search time. Without
+    // them, every search scanned the whole store once per term and compiled a
+    // regex per item — fine on a laptop, far too slow on a Pi with thousands
+    // of memories. Counting once when a memory arrives makes searching cheap.
+    this.byId = new Map();        // id → item
+    this.termCounts = new Map();  // id → Map(token → how many times)
     this.dirty = false;
     this.saveTimer = null;
     this.saveEveryMs = saveEveryMs;
@@ -77,14 +83,24 @@ class Memory {
   }
 
   _index(item) {
-    for (const token of new Set(tokenise(`${item.text} ${item.subject || ""} ${(item.tags || []).join(" ")}`))) {
+    this.byId.set(item.id, item);
+    const counts = new Map();
+    for (const token of tokenise(`${item.text} ${item.subject || ""} ${(item.tags || []).join(" ")}`)) {
+      counts.set(token, (counts.get(token) || 0) + 1);
       if (!this.index.has(token)) this.index.set(token, new Set());
       this.index.get(token).add(item.id);
     }
+    this.termCounts.set(item.id, counts);
   }
 
   _unindex(item) {
-    for (const [, ids] of this.index) ids.delete(item.id);
+    this.byId.delete(item.id);
+    // Only the tokens this memory actually had, rather than the whole index.
+    for (const token of this.termCounts.get(item.id)?.keys() || []) {
+      const ids = this.index.get(token);
+      if (ids) { ids.delete(item.id); if (!ids.size) this.index.delete(token); }
+    }
+    this.termCounts.delete(item.id);
   }
 
   /** Writes are batched — an SD card should not be touched once per memory. */
@@ -146,7 +162,11 @@ class Memory {
       text: `${task} — ${steps.join(" → ")}`,
       subject: task,
       source,
-      importance: outcome === "succeeded" ? 1.5 : 0.8,
+      // Importance means "how much does this matter", not "which tier is this".
+      // Inflating it here would make a procedure outrank a plain fact in general
+      // recall — a "how I did it" answering a "where is it" question. Ranking
+      // between procedures is recallProcedure's job, which filters by tier.
+      importance: outcome === "succeeded" ? 1 : 0.6,
       tags: ["procedure", outcome, skill].filter(Boolean),
       meta: { task, steps, skill, outcome, ms },
     });
@@ -163,43 +183,69 @@ class Memory {
     const terms = tokenise(query);
     if (!terms.length) return [];
 
-    const pool = tier ? this.items.filter((i) => i.tier === tier) : this.items;
-    if (!pool.length) return [];
+    const inTier = (item) => !tier || item.tier === tier;
+    const poolSize = tier ? this.items.reduce((n, i) => n + (i.tier === tier ? 1 : 0), 0) : this.items.length;
+    if (!poolSize) return [];
 
-    const N = pool.length;
+    const N = poolSize;
     const scores = new Map();
     const k1 = 1.2;
 
     for (const term of terms) {
       const ids = this.index.get(term);
       if (!ids) continue;
-      const matching = pool.filter((i) => ids.has(i.id));
-      if (!matching.length) continue;
-      const idf = Math.log(1 + (N - matching.length + 0.5) / (matching.length + 0.5));
-      for (const item of matching) {
-        const text = `${item.text} ${item.subject || ""}`.toLowerCase();
-        const tf = (text.match(new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g")) || []).length;
-        scores.set(item.id, (scores.get(item.id) || 0) + idf * (tf / (tf + k1)));
+      // Document frequency within the tier being searched.
+      let df = 0;
+      for (const id of ids) if (inTier(this.byId.get(id))) df++;
+      if (!df) continue;
+      const idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
+      for (const id of ids) {
+        const item = this.byId.get(id);
+        if (!item || !inTier(item)) continue;
+        const tf = this.termCounts.get(id)?.get(term) || 0;   // counted once, at index time
+        if (!tf) continue;
+        scores.set(id, (scores.get(id) || 0) + idf * (tf / (tf + k1)));
       }
     }
 
     const now = Date.now();
     const results = [];
     for (const [id, base] of scores) {
-      const item = pool.find((i) => i.id === id);
+      const item = this.byId.get(id);
+      if (!item) continue;
       if (tags && !tags.every((t) => item.tags.includes(t))) continue;
 
       const ageDays = (now - Date.parse(item.at)) / 86400000;
       const recency = 1 + 0.3 * Math.exp(-ageDays / 30);          // fades, never to zero
       const weight = SOURCE_WEIGHT[item.source] ?? SOURCE_WEIGHT.unknown;
       const score = base * weight * (item.importance || 1) * recency;
-      if (score >= minScore) results.push({ ...item, score, why: `matched ${terms.filter((t) => this.index.get(t)?.has(id)).join(", ")}` });
+      if (score >= minScore) {
+        results.push({ ...item, score, weak: false, why: `matched ${terms.filter((t) => this.index.get(t)?.has(id)).join(", ")}` });
+      }
     }
 
     results.sort((a, b) => b.score - a.score);
-    const top = results.slice(0, limit);
+
+    // If nothing cleared the bar, return the best of a bad lot rather than
+    // nothing at all — flagged, so the caller can see it is thin.
+    //
+    // This matters more than it looks. A term appearing in every memory carries
+    // no information, so its score collapses toward zero: a store full of
+    // similar entries ("device 12 reported status 3") would return an empty
+    // result for the very words it is made of. Empty is the wrong answer there;
+    // weak-but-honest is the right one.
+    let top = results.slice(0, limit);
+    if (!top.length && scores.size) {
+      top = [...scores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([id, base]) => {
+          const item = this.byId.get(id);
+          return { ...item, score: base, weak: true, why: "only a weak match — these terms appear in almost everything I know" };
+        });
+    }
     for (const hit of top) {
-      const item = this.items.find((i) => i.id === hit.id);
+      const item = this.byId.get(hit.id);
       if (item) { item.useCount++; item.lastUsedAt = new Date().toISOString(); }
     }
     if (top.length) this._scheduleSave();

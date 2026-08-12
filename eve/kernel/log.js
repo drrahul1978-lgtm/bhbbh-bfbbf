@@ -63,6 +63,10 @@ class Logger {
     try {
       this._rotateIfNeeded();
       fs.appendFileSync(this.file, payload);
+      // Check again afterwards: a single large flush can take the file past the
+      // limit in one go, and on a small card the file should never be left
+      // sitting over its limit waiting for the next write to notice.
+      this._rotateIfNeeded();
     } catch (err) {
       console.error(`[warn] could not write the log: ${err.message}`);
     }

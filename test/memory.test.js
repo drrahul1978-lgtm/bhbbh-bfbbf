@@ -45,6 +45,14 @@ const ok = (name) => { passed++; console.log(`  ✔ ${name}`); };
   assert.strictEqual(thermostat[0].source, "user_confirmed", "your word should outrank a forum post");
   ok("a fact you confirmed outranks one from a community source");
 
+  // --- a search that matches everything is as useless as one that matches nothing ---
+  const uniform = new Memory({ dir: path.join(tmp, "uniform"), saveEveryMs: 10 });
+  for (let i = 0; i < 200; i++) uniform.remember({ text: `sensor ${i} reported a reading`, source: "observed" });
+  const flooded = uniform.recall("sensor reading");
+  assert.ok(flooded.length > 0, "a store full of similar entries must still return its best matches");
+  assert.strictEqual(flooded[0].weak, true, "…and must say the match is weak rather than looking confident");
+  ok("when every memory looks alike it returns the best of them, flagged as weak, not nothing");
+
   // --- the honest limit, tested rather than hidden ---
   const synonym = memory.recall("luminaire");
   assert.strictEqual(synonym.length, 0, "word matching cannot find synonyms, and the tests say so");
