@@ -118,9 +118,9 @@ function fileDisagreement(payload) {
   return cases.open({
     question: payload.question || "Grade this trading card from a photo",
     answer: payload.answer,
-    why: payload.why || "her two methods disagreed and the evidence did not settle it",
+    why: payload.why || "she was not confident in this one",
     confidence: payload.confidence ?? null,
-    tools: ["eve one", "eve two"],
+    tools: ["eve"],
     research: payload.transcript || null,
   });
 }
@@ -137,7 +137,7 @@ const server = http.createServer(async (req, res) => {
     return send(200, {
       // No cloud grading exists any more, so the page never looks for one.
       grading: "local",
-      reviewer: REVIEW ? "eve debates eve" : "off",
+      reviewer: REVIEW ? "low-confidence grades filed for review" : "off",
       host: eve.platform.host,
     });
   }
@@ -183,7 +183,10 @@ server.listen(PORT, () => {
   console.log(`\n🧠 EVE is serving on http://localhost:${PORT}`);
   console.log(`   ${eve.describe()}`);
   console.log(`   grading: local — Eve runs in the visitor's browser, no key anywhere`);
-  console.log(`   checking: ${REVIEW ? "Eve debates Eve; what she cannot settle is filed for you" : "off"}`);
+  if (eve.external?.volumes?.length) {
+    console.log(`   plugged in: ${require("./eve/platform/external.js").describe(eve.external.volumes)}`);
+  }
+  console.log(`   checking: ${REVIEW ? "low-confidence grades are filed for you" : "off"}`);
   console.log(`   limits: ${PER_MINUTE}/minute and ${PER_DAY}/day per address${APP_TOKEN ? ", app token required" : ""}`);
   if (!APP_TOKEN) console.log(`   (set EVE_APP_TOKEN to refuse clients that are not yours)`);
   console.log(`\n   Visitors need no key, no account and no settings.\n`);

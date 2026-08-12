@@ -19,6 +19,7 @@ const { Ledger } = require("./audit.js");
 const { Permissions, PermissionDenied, CAPABILITIES } = require("./permissions.js");
 const { HealthMonitor } = require("./health.js");
 const platform = require("../platform/detect.js");
+const external = require("../platform/external.js");
 
 function boot({ configFile = null, env = process.env, overrides = {}, confirm = null } = {}) {
   // Look at the machine first, so the defaults suit wherever she woke up.
@@ -37,6 +38,13 @@ function boot({ configFile = null, env = process.env, overrides = {}, confirm = 
   const permissions = new Permissions({ policy: cfg.permissions, confirm, log, audit });
   const health = new HealthMonitor({ config: cfg, log });
 
+  // Anything plugged in that carries her data. Found on the way up, so a Pi
+  // with no connection still starts with everything it needs.
+  const drives = external.resolveSources({ localDir: cfg.dataDir });
+  if (drives.volumes.length) {
+    log.info(external.describe(drives.volumes), { notes: drives.notes });
+  }
+
   log.info(platform.describe(host), {
     host: host.host, class: host.class, container: host.container,
     hardware: platform.hostCapabilities(host),
@@ -51,6 +59,7 @@ function boot({ configFile = null, env = process.env, overrides = {}, confirm = 
   return {
     config: cfg, vault, log, audit, permissions, health,
     platform: host,
+    external: drives,
     describe: () => platform.describe(host),
     /** Run guarded work: permission first, then recorded in the ledger. */
     guard: (capability, spec, work, verify) => permissions.guard(capability, spec, work, verify),
@@ -62,4 +71,4 @@ function boot({ configFile = null, env = process.env, overrides = {}, confirm = 
   };
 }
 
-module.exports = { boot, config, Vault, Logger, Ledger, Permissions, PermissionDenied, HealthMonitor, CAPABILITIES };
+module.exports = { boot, config, external, Vault, Logger, Ledger, Permissions, PermissionDenied, HealthMonitor, CAPABILITIES };

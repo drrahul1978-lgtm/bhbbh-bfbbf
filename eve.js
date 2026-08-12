@@ -68,18 +68,7 @@
    * what Eve actually measured — she can point at the evidence, which is the one
    * advantage a small transparent model has over a big opaque one.
    */
-  /**
-   * Grade an image.
-   *
-   * With a second network passed in, the two of them debate and the result
-   * carries their disagreement — see eve/debate/. With one, she answers alone
-   * and says nothing about confidence she has not earned.
-   */
-  function grade(net, image, second = null) {
-    if (second) {
-      const Debate = root.Debate || (typeof require !== "undefined" ? require("./eve/debate/debate.js") : null);
-      if (Debate) return Debate.debate(net, second, image);
-    }
+  function grade(net, image) {
     const { features, diagnostics } = Vision.extract(image);
     const grades = outputToGrades(net.predict(features));
     const overall = Synth.overallGrade(grades);

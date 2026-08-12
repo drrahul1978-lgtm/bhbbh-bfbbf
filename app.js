@@ -1,92 +1,13 @@
 /* GradeMyCard — AI trading card grader.
- * Runs fully client-side: the photo + API key go straight from the browser
- * to the chosen OpenAI-compatible provider serving Llama vision models. */
-
-// There is deliberately no key in this file.
-//
-// A shared key lived here so visitors needed zero setup. It was also readable
-// by anyone who opened the page, which is the same thing as publishing it —
-// splitting the string only hid it from automated scanners, not from people.
-//
-// Zero-setup grading still works, because Eve runs in the browser with no key
-// and no network at all. A cloud provider is now opt-in, using your own key.
-
-const PROVIDERS = {
-  // When the page is served by eve-proxy.js, the machine serving it holds the
-  // key and does the grading. The visitor never sees a key, a settings panel,
-  // or any sign that a provider is involved — which is the point.
-  site: {
-    name: "This server",
-    hosted: true,
-    endpoint: "/api/grade",
-    defaultModel: "handled by the server",
-    keyHelp: "This server grades for you — nothing to configure.",
-  },
-  // Eve is not a provider at all — she is the network in eve.js, running here,
-  // on this device, with no key and no request. Kept in this list so she can be
-  // picked from the same menu as the cloud models.
-  eve: {
-    name: "Eve",
-    local: true,
-    endpoint: null,
-    defaultModel: "eve (built from scratch, trained by you)",
-    keyHelp: 'No key, no network, no provider — Eve runs on this device. <a href="train.html">Train her here</a>.',
-  },
-  groq: {
-    name: "Groq",
-    endpoint: "https://api.groq.com/openai/v1/chat/completions",
-    defaultModel: "meta-llama/llama-4-scout-17b-16e-instruct",
-    keyHelp: 'Get a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>.',
-  },
-  openrouter: {
-    name: "OpenRouter",
-    endpoint: "https://openrouter.ai/api/v1/chat/completions",
-    defaultModel: "meta-llama/llama-4-scout",
-    keyHelp: 'Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.',
-  },
-  together: {
-    name: "Together AI",
-    endpoint: "https://api.together.xyz/v1/chat/completions",
-    defaultModel: "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-    keyHelp: 'Get a key at <a href="https://api.together.ai/settings/api-keys" target="_blank" rel="noopener">api.together.ai</a>.',
-  },
-};
-
-const GRADING_PROMPT = `You are a professional trading card grader (like a PSA/BGS grader) examining a photo of a collectible card (Pokémon, football, baseball, basketball, soccer, etc.).
-
-Carefully inspect the card in the image and estimate its condition. Consider:
-- CENTERING: how evenly the borders are sized left/right and top/bottom
-- CORNERS: sharpness vs. whitening, fraying or rounding on all four corners
-- EDGES: chipping, whitening or roughness along the edges
-- SURFACE: scratches, print lines, creases, dents, stains, holo wear
-
-Respond with ONLY a JSON object (no markdown fences, no extra text) in exactly this shape:
-{
-  "card_name": "best guess of the card's name, or 'Unknown card'",
-  "card_set": "set/series and year if identifiable, else ''",
-  "card_type": "pokemon | football | baseball | basketball | soccer | other",
-  "centering": <number 1-10>,
-  "corners": <number 1-10>,
-  "edges": <number 1-10>,
-  "surface": <number 1-10>,
-  "overall_grade": <number 1-10, may use .5 steps, weighted like PSA (lowest subgrade matters most)>,
-  "grade_label": "Gem Mint | Mint | Near Mint-Mint | Near Mint | Excellent | Very Good | Good | Fair | Poor",
-  "confidence": "low | medium | high (how clearly the photo shows condition details)",
-  "observations": ["3-6 short, specific notes about what you saw, e.g. 'slight whitening on bottom-left corner'"]
-}
-
-If the image does not appear to contain a trading card, set card_name to "Not a trading card", every grade to 1, confidence to "low", and explain in observations.`;
+ *
+ * There is no API key here, no provider and no settings, because there is
+ * nothing to configure. Eve does the grading, in this browser, on this device.
+ * Nothing about a card ever leaves the machine it was photographed on.
+ */
 
 // ---------- element refs ----------
 const $ = (id) => document.getElementById(id);
 const els = {
-  settingsBtn: $("settingsBtn"),
-  settingsPanel: $("settingsPanel"),
-  provider: $("provider"),
-  model: $("model"),
-  apiKey: $("apiKey"),
-  keyHelp: $("keyHelp"),
-  saveSettings: $("saveSettings"),
   dropZone: $("dropZone"),
   fileInput: $("fileInput"),
   dropPlaceholder: $("dropPlaceholder"),
@@ -105,41 +26,6 @@ const els = {
 };
 
 let imageDataUrl = null;
-
-// ---------- settings ----------
-/** Eve needs no model name and no key, so those fields are hidden for her. */
-function syncProviderUI() {
-  const isLocal = !!PROVIDERS[els.provider.value]?.local;
-  els.model.parentElement.classList.toggle("hidden", isLocal);
-  els.apiKey.parentElement.classList.toggle("hidden", isLocal);
-  els.keyHelp.innerHTML = PROVIDERS[els.provider.value].keyHelp;
-}
-
-function loadSettings() {
-  // Eve by default: she needs no key, so the site works for a first-time
-  // visitor without anyone's credentials being spent.
-  const provider = localStorage.getItem("gmc_provider") || "eve";
-  els.provider.value = provider;
-  els.model.value = localStorage.getItem("gmc_model") || PROVIDERS[provider].defaultModel;
-  els.apiKey.value = localStorage.getItem("gmc_api_key") || "";
-  syncProviderUI();
-}
-
-function saveSettings() {
-  localStorage.setItem("gmc_provider", els.provider.value);
-  localStorage.setItem("gmc_model", els.model.value.trim());
-  localStorage.setItem("gmc_api_key", els.apiKey.value.trim());
-  setStatus("Settings saved ✔", false);
-  els.settingsPanel.classList.add("hidden");
-  updateGradeButton();
-}
-
-els.provider.addEventListener("change", () => {
-  els.model.value = PROVIDERS[els.provider.value].defaultModel;
-  syncProviderUI();
-});
-els.settingsBtn.addEventListener("click", () => els.settingsPanel.classList.toggle("hidden"));
-els.saveSettings.addEventListener("click", saveSettings);
 
 // ---------- image handling ----------
 function setImage(file) {
@@ -227,151 +113,50 @@ function imageDataFromUrl(url) {
   });
 }
 
-/** Grade with Eve — entirely offline. */
-async function gradeWithEve() {
-  const saved = Eve.loadModel();
-  let net = saved?.net;
-  let origin = "your Eve, trained in this browser";
+/** The Eve doing the grading: yours if you have trained one, else the shipped one. */
+let gradingNet = null;
 
-  if (!net) {
-    // Fall back to the Eve shipped with the site.
-    const res = await fetch("eve-model.json", { cache: "no-store" }).catch(() => null);
-    if (!res || !res.ok) {
-      throw new Error('Eve has not been trained yet — open "🧠 Meet Eve" and train her first.');
-    }
-    const file = await res.json();
-    if (file.featureCount !== Vision.FEATURE_COUNT) {
-      throw new Error('The bundled Eve does not match this version — retrain her on the "🧠 Meet Eve" page.');
-    }
-    net = NN.Net.fromJSON(file.net);
-    origin = `the Eve shipped with this site (${(file.stats?.cardsSeen || 0).toLocaleString()} cards studied)`;
+async function loadEve() {
+  if (gradingNet) return gradingNet;
+  const yours = Eve.loadModel();
+  if (yours) { gradingNet = yours.net; return gradingNet; }
+
+  const res = await fetch("eve-model.json", { cache: "no-store" });
+  if (!res.ok) throw new Error("Eve is missing from this site — she cannot grade without her weights.");
+  const file = await res.json();
+  if (file.featureCount !== Vision.FEATURE_COUNT) {
+    throw new Error("The shipped Eve does not match this version of the site.");
   }
-
-  // A second Eve and the judge, if the site ships them — then they debate it.
-  if (self.debateReady) await self.debateReady;
-  let second = null;
-  try {
-    const res = await fetch("eve-model-two.json", { cache: "no-store" });
-    if (res.ok) {
-      const file = await res.json();
-      if (file.featureCount === Vision.FEATURE_COUNT) second = NN.Net.fromJSON(file.net);
-    }
-  } catch { /* one Eve is fine */ }
-
-  const image = await imageDataFromUrl(imageDataUrl);
-  const result = Eve.grade(net, image, second);
-  const stats = saved?.stats;
-
-  renderResults({
-    card_name: "Graded by Eve",
-    card_set: origin,
-    card_type: "other",
-    centering: result.centering,
-    corners: result.corners,
-    edges: result.edges,
-    surface: result.surface,
-    overall_grade: result.overall,
-    grade_label: result.label,
-    confidence: result.transcript
-      ? `${Math.round(result.confidence * 100)}% — ${result.needsHuman ? "her two readings disagree on " + result.unresolved.join(" and ") : "her two readings agree"}`
-      : (stats?.bestMAE ? `±${stats.bestMAE.toFixed(2)} grade points on her practice set` : "unmeasured"),
-    observations: result.observations,
-  });
+  gradingNet = NN.Net.fromJSON(file.net);
+  gradingNet.__stats = file.stats || null;
+  return gradingNet;
 }
 
 async function gradeCard() {
-  const providerId = localStorage.getItem("gmc_provider") || els.provider.value;
-  const provider = PROVIDERS[providerId] || PROVIDERS.groq;
-
-  // Grading done by the machine serving the page. No key here, by design.
-  if (provider.hosted) {
-    els.gradeBtn.disabled = true;
-    els.results.classList.add("hidden");
-    setStatus("Inspecting centering, corners, edges & surface…", false, true);
-    try {
-      const res = await fetch("/api/grade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageDataUrl }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || `the server replied ${res.status}`);
-      renderResults(body);
-      setStatus("");
-    } catch (err) {
-      setStatus(`❌ ${err.message}`, true);
-    } finally {
-      updateGradeButton();
-    }
-    return;
-  }
-
-  if (provider.local) {
-    els.gradeBtn.disabled = true;
-    els.results.classList.add("hidden");
-    setStatus("Eve is measuring borders, corners, edges & surface…", false, true);
-    try {
-      await gradeWithEve();
-      setStatus("");
-    } catch (err) {
-      setStatus(`❌ ${err.message}`, true);
-    } finally {
-      updateGradeButton();
-    }
-    return;
-  }
-
-  const model = (localStorage.getItem("gmc_model") || provider.defaultModel).trim();
-  let apiKey = (localStorage.getItem("gmc_api_key") || els.apiKey.value).trim();
-  if (!apiKey) {
-    els.settingsPanel.classList.remove("hidden");
-    els.settingsPanel.scrollIntoView({ behavior: "smooth" });
-    setStatus(
-      `${provider.name} needs your own API key (⚙️ API Settings) — or switch to 🧠 Eve, who needs none.`,
-      true
-    );
-    return;
-  }
-
   els.gradeBtn.disabled = true;
   els.results.classList.add("hidden");
   setStatus("Inspecting centering, corners, edges & surface…", false, true);
-
   try {
-    const res = await fetch(provider.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        max_tokens: 1024,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: GRADING_PROMPT },
-              { type: "image_url", image_url: { url: imageDataUrl } },
-            ],
-          },
-        ],
-      }),
+    const net = await loadEve();
+    const image = await imageDataFromUrl(imageDataUrl);
+    const result = Eve.grade(net, image);
+    const stats = net.__stats || Eve.loadStats();
+
+    renderResults({
+      card_name: "Graded by Eve",
+      card_set: "on this device, with no key and no network",
+      card_type: "other",
+      centering: result.centering,
+      corners: result.corners,
+      edges: result.edges,
+      surface: result.surface,
+      overall_grade: result.overall,
+      grade_label: result.label,
+      confidence: stats?.validationMAE
+        ? `within about ${stats.validationMAE.toFixed(1)} of a grade point on her practice cards`
+        : "unmeasured",
+      observations: result.observations,
     });
-
-    if (!res.ok) {
-      const body = await res.text();
-      let detail = "";
-      try { detail = JSON.parse(body)?.error?.message || ""; } catch { /* raw body */ }
-      if (res.status === 401) throw new Error("Invalid API key — check ⚙️ API Settings.");
-      if (res.status === 429) throw new Error("Rate limited by the provider — wait a moment and retry.");
-      throw new Error(detail || `Provider error (HTTP ${res.status}).`);
-    }
-
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content ?? "";
-    renderResults(extractJson(text));
     setStatus("");
   } catch (err) {
     setStatus(`❌ ${err.message}`, true);
@@ -421,51 +206,7 @@ function renderResults(g) {
   els.results.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-// ---------- magic link ----------
-// A trusted person can be sent a link like  https://site/#key=gsk_…&provider=groq
-// The key is saved to their browser and immediately scrubbed from the URL, so it
-// never appears in the repo, the page source, or their browser history.
-function applyMagicLink() {
-  if (!location.hash) return;
-  const params = new URLSearchParams(location.hash.slice(1));
-  const key = params.get("key") || (location.hash.slice(1).startsWith("gsk_") ? location.hash.slice(1) : null);
-  if (!key) return;
-  const provider = PROVIDERS[params.get("provider")] ? params.get("provider") : "groq";
-  localStorage.setItem("gmc_api_key", key.trim());
-  localStorage.setItem("gmc_provider", provider);
-  localStorage.setItem("gmc_model", PROVIDERS[provider].defaultModel);
-  history.replaceState(null, "", location.pathname + location.search);
-  setStatus("✅ API key configured automatically — you're ready to grade!");
-}
-
-/**
- * Ask the machine serving this page whether it grades.
- *
- * If it does, use it silently: no key, no settings, nothing for the visitor to
- * do or notice. If it does not — a plain static host, or the file opened
- * directly — Eve handles it locally instead. Either way the page works on
- * arrival, and either way nobody is asked for a credential.
- */
-async function detectHostedGrading() {
-  if (localStorage.getItem("gmc_provider")) return;   // an explicit choice wins
-  try {
-    const res = await fetch("/api/health", { cache: "no-store" });
-    if (!res.ok) return;
-    const info = await res.json();
-    if (info.grading !== "available") return;
-    els.provider.value = "site";
-    syncProviderUI();
-    localStorage.setItem("gmc_provider", "site");
-  } catch {
-    // No server behind this page: Eve stays selected. Nothing to report.
-  }
-}
-
 // ---------- init ----------
-applyMagicLink();
-loadSettings();
-detectHostedGrading();
 updateGradeButton();
-if (!localStorage.getItem("gmc_api_key")) {
-  els.apiKey.placeholder = "Your own key — or use Eve, who needs none";
-}
+// Fetch her weights now rather than on the first click, so grading feels instant.
+loadEve().catch(() => { /* reported when the button is pressed */ });

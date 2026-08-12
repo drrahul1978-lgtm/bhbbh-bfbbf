@@ -19,10 +19,7 @@
       <span class="logo-icon">🃏</span>
       <span class="logo-text">Grade<span class="accent">My</span>Card</span>
     </div>
-    <div class="header-actions">
-      <a class="ghost-btn" href="train.html" title="Train your own AI">🧠 Meet Eve</a>
-      <button id="settingsBtn" class="ghost-btn" title="API settings">⚙️ API Settings</button>
-    </div>
+    <a class="ghost-btn" href="train.html" title="Train your own AI">🧠 Meet Eve</a>
   </header>
 
   <main>
@@ -30,41 +27,10 @@
       <h1>AI-powered card grading,<br /><span class="accent">in seconds.</span></h1>
       <p class="subtitle">
         Snap a photo of your Pokémon, football, baseball or basketball card and get an
-        instant PSA-style condition estimate — centering, corners, edges &amp; surface —
-        powered by Meta's Llama&nbsp;4 vision model.
+        instant PSA-style condition estimate — centering, corners, edges &amp; surface.
+        No account, no key, no upload: <a href="train.html">Eve</a> grades it in your
+        browser, on your device.
       </p>
-    </section>
-
-    <!-- Settings panel -->
-    <section id="settingsPanel" class="card panel settings-panel hidden">
-      <h2>⚙️ API Settings</h2>
-      <p class="hint">
-        This site runs entirely in your browser. Your API key is stored only in this
-        browser (localStorage) and is sent directly to the AI provider — never to any
-        other server.
-      </p>
-      <div class="field-row">
-        <label for="provider">Provider</label>
-        <select id="provider">
-          <option value="site">🖥️ This server (nothing to configure)</option>
-          <option value="eve">🧠 Eve — my own AI (offline, no key)</option>
-          <option value="groq">Groq (free tier — recommended)</option>
-          <option value="openrouter">OpenRouter</option>
-          <option value="together">Together AI</option>
-        </select>
-      </div>
-      <div class="field-row">
-        <label for="model">Model</label>
-        <input type="text" id="model" spellcheck="false" />
-      </div>
-      <div class="field-row">
-        <label for="apiKey">API key</label>
-        <input type="password" id="apiKey" placeholder="Paste your API key…" spellcheck="false" autocomplete="off" />
-      </div>
-      <p class="hint" id="keyHelp"></p>
-      <div class="field-row right">
-        <button id="saveSettings" class="primary-btn small">Save settings</button>
-      </div>
     </section>
 
     <!-- Upload area -->
@@ -138,14 +104,13 @@
   </main>
 
   <footer class="site-footer">
-    <p>Built with 🃏 + 🦙 Llama 4 vision, and 🧠 <a href="train.html">Eve</a> — a network built from scratch that runs with no network at all.</p>
+    <p>🧠 Graded by <a href="train.html">Eve</a> — a neural network built from scratch, running entirely on your device. No key, no account, no upload.</p>
   </footer>
 
   <script src="nn.js"></script>
   <script src="vision.js"></script>
   <script src="synth.js"></script>
   <script src="eve.js"></script>
-  <script src="eve/debate/debate-browser.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

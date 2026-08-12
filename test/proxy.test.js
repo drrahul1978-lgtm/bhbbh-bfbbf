@@ -30,8 +30,8 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     // --- nothing here wants a credential ---
     const health = await fetch(at("/api/health")).then((r) => r.json());
     assert.strictEqual(health.grading, "local", "grading happens in the visitor's browser now");
-    assert.match(health.reviewer, /debates/);
-    ok("the server reports that grading is local and checking is Eve against Eve");
+    assert.match(health.reviewer, /filed/);
+    ok("the server reports that grading is local and low-confidence grades are filed");
 
     const source = fs.readFileSync(path.join(ROOT, "eve-proxy.js"), "utf8");
     assert.ok(!/api\.groq\.com|GROQ_API_KEY|Authorization: `Bearer/.test(source),
@@ -40,11 +40,11 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     ok("no key, no provider call and no credential anywhere in the server");
 
     // --- a visitor still gets everything they need, with no setup ---
-    for (const asset of ["/index.html", "/app.js", "/eve-model.json", "/eve-model-two.json", "/eve/debate/debate.js"]) {
+    for (const asset of ["/index.html", "/app.js", "/eve-model.json"]) {
       const res = await fetch(at(asset));
       assert.strictEqual(res.status, 200, `${asset} should be served`);
     }
-    ok("both Eves and the judge are served, so a visitor arrives ready to grade");
+    ok("Eve and her weights are served, so a visitor arrives ready to grade");
 
     const pageJs = await fetch(at("/app.js")).then((r) => r.text());
     assert.ok(!/gsk_[A-Za-z0-9]{20,}/.test(pageJs), "nothing key-shaped should reach the browser");
@@ -55,9 +55,9 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         answer: JSON.stringify({ overall: 6.5, corners: 4 }),
-        why: "her two readings disagreed on corners",
+        why: "she was not confident about the corners",
         confidence: 0.3,
-        transcript: "corners: Eve One said 8.0, Eve Two said 4.0",
+        transcript: "corner roughness measured 2.4, which is borderline",
       }),
     });
     assert.strictEqual(filed.status, 200);
@@ -68,9 +68,9 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     assert.ok(fs.existsSync(casesFile), "the case should be on disk for you");
     const stored = JSON.parse(fs.readFileSync(casesFile, "utf8"));
     assert.strictEqual(stored.length, 1);
-    assert.match(stored[0].why, /disagreed on corners/);
+    assert.match(stored[0].why, /not confident about the corners/);
     assert.ok(!JSON.stringify(stored).includes("data:image"), "the photograph is never filed");
-    ok("a disagreement Eve could not settle is filed for you, without the photo");
+    ok("a grade Eve was unsure about is filed for you, without the photo");
 
     // --- the endpoint is still defended, because it writes to the card ---
     let refused = false;
