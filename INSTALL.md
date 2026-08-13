@@ -56,10 +56,10 @@ feature the desktop app does.
 
 1. Install [Node.js](https://nodejs.org) — the LTS installer, click through it.
 2. Copy this folder to the PC.
-3. **Double-click `EVE.cmd`.**
+3. **Double-click `Start EVE.cmd`.**
 
 She starts and your browser opens on her eye. Leave the black window open;
-closing it stops her. If Node is missing, `EVE.cmd` says so and opens the
+closing it stops her. If Node is missing, `Start EVE.cmd` says so and opens the
 download page rather than failing with a stack trace.
 
 `localhost` counts as a secure origin, so the camera works here — which is the

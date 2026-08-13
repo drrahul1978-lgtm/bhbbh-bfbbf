@@ -44,8 +44,8 @@ function desktopDir() {
 
 // ---------- Windows ----------
 function windows() {
-  const target = path.join(ROOT, "EVE.cmd");
-  if (!fs.existsSync(target)) throw new Error(`EVE.cmd is missing from ${ROOT}`);
+  const target = path.join(ROOT, "Start EVE.cmd");
+  if (!fs.existsSync(target)) throw new Error(`"Start EVE.cmd" is missing from ${ROOT}`);
 
   /* Paths go through the environment rather than the command line: a folder
    * called "Rahul's stuff" would otherwise end the PowerShell string early. */
@@ -148,6 +148,6 @@ try {
   }
 } catch (err) {
   console.error(`\n  Could not make the shortcut: ${err.message}\n`);
-  console.error(`  You can still start her by double-clicking ${process.platform === "win32" ? "EVE.cmd" : "eve.sh"} in this folder.\n`);
+  console.error(`  You can still start her by double-clicking ${process.platform === "win32" ? "Start EVE.cmd" : "eve.sh"} in this folder.\n`);
   process.exit(1);
 }
