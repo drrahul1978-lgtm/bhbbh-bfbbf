@@ -58,15 +58,19 @@ jobs:
         run: node tools/build-dist.js
 
       - name: Draw the icon and derive every size
-        run: |
-          node tools/make-icon.js
-          npx --yes @tauri-apps/cli@2 icon src-tauri/icons/source.png
+        run: node tools/make-icon.js
 
       - name: Build the installers
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Run the CLI straight from npx. The default is `npm run tauri build`,
+          # which needs both a "tauri" script and an installed node_modules —
+          # two things that can be missing or resolve to the wrong platform
+          # binary. This build has no node dependencies, so it fetches the CLI
+          # for whichever machine it is on and nothing else has to line up.
+          tauriScript: npx --yes @tauri-apps/cli@2
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: EVE ${{ github.ref_name }}
           releaseBody: |

@@ -110,9 +110,20 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous ?? "1";
 
       assert.ok(fs.existsSync(path.join(secureDir, "eve-cert.pem")), "it should have made a certificate");
-      const mode = fs.statSync(path.join(secureDir, "eve-key.pem")).mode & 0o777;
-      assert.strictEqual(mode, 0o600, "the private key must not be readable by other users");
-      ok("--https serves over TLS with a self-signed certificate, key kept private");
+      const keyFile = path.join(secureDir, "eve-key.pem");
+      if (process.platform === "win32") {
+        /* Windows has no POSIX permission bits. chmod there only toggles the
+         * read-only flag and the mode always reads back as 0o666, so asserting
+         * 0o600 tests nothing and fails everywhere. Access is governed by ACLs
+         * inherited from the user's profile instead, which is not something
+         * this test can inspect — so it checks only that the key was written. */
+        assert.ok(fs.existsSync(keyFile), "it should have written the private key");
+        ok("--https serves over TLS with a self-signed certificate (key access is Windows' ACLs to enforce)");
+      } else {
+        const mode = fs.statSync(keyFile).mode & 0o777;
+        assert.strictEqual(mode, 0o600, "the private key must not be readable by other users");
+        ok("--https serves over TLS with a self-signed certificate, key kept private");
+      }
     } finally {
       secure.kill("SIGKILL");
     }
