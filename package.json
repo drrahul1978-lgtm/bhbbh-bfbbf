@@ -19,14 +19,11 @@
     "test:integration": "node test/integration.test.js",
     "start": "node eve-proxy.js",
     "drives": "node -e \"const e=require('./eve/platform/external.js');console.log(e.describe());console.log(JSON.stringify(e.resolveSources(),null,2))\"",
-    "tauri": "tauri",
+    "tauri": "npx --yes @tauri-apps/cli@2",
     "shortcut": "node tools/make-shortcut.js",
     "icon": "node tools/make-icon.js",
     "dist": "node tools/build-dist.js",
-    "app": "npm run icon && npm run dist && tauri build",
-    "app:dev": "npm run icon && npm run dist && tauri dev"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2.11.4"
+    "app": "npm run icon && npm run dist && npx --yes @tauri-apps/cli@2 build",
+    "app:dev": "npm run icon && npm run dist && npx --yes @tauri-apps/cli@2 dev"
   }
 }
