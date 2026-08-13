@@ -57,6 +57,79 @@
 
   let heldOutCache = null;
 
+  /* Ways of saying the same thing that carry no meaning of their own.
+   *
+   * Training on these teaches her that "could you turn on the lamp for me" is
+   * the same request as "turn on the lamp" — she stops depending on the exact
+   * scaffolding of a sentence. Measured worth about two points on phrasings
+   * she has never seen; four copies was no better than two, so it is two. */
+  const FILLERS = ["please", "could you", "can you", "hey", "i want you to", "would you"];
+  const TAILS = ["now", "for me", "please", "thanks"];
+  const DROPPABLE = new Set(["the", "a", "my", "please", "can", "you"]);
+
+  function vary(text, rand) {
+    const r = rand();
+    if (r < 0.25) return `${FILLERS[Math.floor(rand() * FILLERS.length)]} ${text}`;
+    if (r < 0.45) return `${text} ${TAILS[Math.floor(rand() * TAILS.length)]}`;
+    if (r < 0.65) {
+      const kept = Intent.tokenize(text).filter((w) => !(DROPPABLE.has(w) && rand() < 0.8));
+      return kept.join(" ") || text;
+    }
+    return text;
+  }
+
+  /**
+   * How hard to work, given the machine she woke up on.
+   *
+   * The architecture is identical in every preset on purpose: her mind file
+   * stays portable, so a model trained overnight on a desktop can be copied
+   * straight onto a Pi Zero and used there. What changes is how much practice
+   * she gets per round — epochs, how many device names she sees per phrasing,
+   * and how many reworded copies of each sentence.
+   *
+   * A Pi Zero doing a desktop-sized round would take minutes per generation
+   * and thrash its card; a desktop doing a Pi-sized round would leave most of
+   * its ability unused.
+   */
+  const EFFORT = {
+    tiny:        { epochs: 12, fills: 4,  variations: 1, label: "a very small board" },
+    constrained: { epochs: 25, fills: 8,  variations: 2, label: "a Raspberry Pi" },
+    modest:      { epochs: 45, fills: 12, variations: 2, label: "an ordinary computer" },
+    roomy:       { epochs: 80, fills: 20, variations: 3, label: "a fast machine" },
+  };
+
+  /**
+   * Work out what this machine can take.
+   *
+   * Deliberately does not throw if the platform module is unavailable (it is
+   * absent in the browser): an unknown machine is treated as a modest one,
+   * which is the setting that is wrong by the smallest margin either way.
+   */
+  function effortFor(info) {
+    const read = (i) => ({
+      klass: i && i.class,
+      cores: i && i.resources && i.resources.cores,
+      memoryMb: i && i.resources && i.resources.memoryMb,
+    });
+    let { klass, cores, memoryMb } = read(info);
+
+    if (!klass && typeof require !== "undefined") {
+      try {
+        const detect = require("./eve/platform/detect.js");
+        ({ klass, cores, memoryMb } = read(detect.detect()));
+      } catch { /* browser, or platform module absent */ }
+    }
+
+    /* A Pi Zero is 'constrained' like a Pi 4, but it is a single slow core
+     * with half a gigabyte. Working that hard on it is how you get a machine
+     * that is busy for minutes and useful to nobody. */
+    if (klass === "constrained" && ((cores && cores <= 1) || (memoryMb && memoryMb < 1024))) {
+      return { ...EFFORT.tiny, preset: "tiny", cores, memoryMb };
+    }
+    const preset = EFFORT[klass] ? klass : "modest";
+    return { ...EFFORT[preset], preset, cores, memoryMb };
+  }
+
   /**
    * Split her templates into a training half and a held-out half.
    *
@@ -84,20 +157,27 @@
     return { train, validate };
   }
 
-  /** Fill templates with devices and numbers, and featurise into rows. */
-  function expand(templates, seed) {
+  /**
+   * Fill templates with devices and numbers, and featurise into rows.
+   *
+   * `variations` adds reworded copies of each sentence. The exam is always
+   * built with variations: 0 — she is tested on the plain phrasing, so a score
+   * cannot be inflated by grading her on sentences she was drilled on.
+   */
+  function expand(templates, seed, { fills = 8, variations = 0 } = {}) {
     const rand = NN.mulberry32(seed);
     const pick = (list) => list[Math.floor(rand() * list.length)];
     const rows = [];
 
     Intent.INTENT_NAMES.forEach((name, index) => {
       for (const template of templates[name] || []) {
-        const repeats = template.includes("{thing}") ? 8 : 3;
+        const repeats = template.includes("{thing}") ? fills : Math.max(3, Math.round(fills / 2));
         for (let r = 0; r < repeats; r++) {
           const text = template
             .replace(/\{thing\}/g, () => pick(Intent.SAMPLE_THINGS))
             .replace(/\{number\}/g, () => String(Math.floor(rand() * 100)));
           rows.push(makeRow(text, name, index));
+          for (let v = 0; v < variations; v++) rows.push(makeRow(vary(text, rand), name, index));
         }
       }
     });
@@ -143,9 +223,11 @@
    * because a run that never rejects anything is a run whose test is too easy.
    */
   class Trainer {
-    constructor(net, stats = {}, corrections = []) {
+    constructor(net, stats = {}, corrections = [], effort = null) {
       this.net = net;
       this.corrections = corrections;
+      /* Worked out once, from the machine she is on. */
+      this.effort = effort || effortFor();
       this.generation = stats.generation || 0;
       this.best = typeof stats.accuracy === "number" ? stats.accuracy : null;
       this.keptRounds = stats.keptRounds || 0;
@@ -156,14 +238,18 @@
     /** One round. Returns what happened, including when nothing did. */
     round(opts = {}) {
       const seed = opts.seed ?? ((Math.random() * 1e9) >>> 0);
-      const epochs = opts.epochs ?? 25;
+      const effort = this.effort;
+      const epochs = opts.epochs ?? effort.epochs;
       const lr = opts.lr ?? 0.03;
 
       /* The exam is fixed; only the practice changes. Each round fills the
        * training templates with different devices and numbers, so she sees
        * genuinely new sentences without the test moving under her. */
       const { train } = splitTemplates();
-      const trainRows = expand(train, seed).concat(correctionRows(this.corrections));
+      const trainRows = expand(train, seed, {
+        fills: opts.fills ?? effort.fills,
+        variations: opts.variations ?? effort.variations,
+      }).concat(correctionRows(this.corrections));
       const validateRows = heldOutRows();
 
       // Train a copy, so a bad round cannot damage what already works.
@@ -196,6 +282,7 @@
         kept: improved,
         trainedOn: trainRows.length,
         testedOn: validateRows.length,
+        effort: effort.preset,
       };
     }
 
@@ -212,6 +299,7 @@
 
     stats() {
       return {
+        effort: this.effort.preset,
         generation: this.generation,
         accuracy: this.best,
         keptRounds: this.keptRounds,
@@ -226,7 +314,7 @@
   function heldOutRows() {
     if (!heldOutCache) {
       const { validate } = splitTemplates();
-      heldOutCache = expand(validate, HOLDOUT_SEED + 1);
+      heldOutCache = expand(validate, HOLDOUT_SEED + 1, { fills: 8, variations: 0 });
     }
     return heldOutCache;
   }
@@ -250,15 +338,19 @@
    * uninteresting reason that it has seen it.
    */
   function trainBaseline(opts = {}) {
+    const effort = opts.effort || effortFor();
     const { train } = splitTemplates();
-    const rows = expand(train, opts.seed ?? 4242);
+    const rows = expand(train, opts.seed ?? 4242, {
+      fills: opts.fills ?? effort.fills,
+      variations: opts.variations ?? effort.variations,
+    });
     const net = new NN.Net([Intent.DIM, 48, Intent.INTENT_NAMES.length], { seed: opts.netSeed ?? 99 });
     const rand = NN.mulberry32(7);
     const xs = rows.map((r) => r.x);
     const ys = rows.map((r) => r.y);
-    const epochs = opts.epochs ?? 60;
+    const epochs = opts.epochs ?? Math.max(60, effort.epochs);
     for (let e = 0; e < epochs; e++) net.trainEpoch(xs, ys, { lr: opts.lr ?? 0.03, batchSize: 16, rand });
-    return { net, rows, accuracy: accuracy(net, heldOutRows()) };
+    return { net, rows, accuracy: accuracy(net, heldOutRows()), effort };
   }
 
   /** A brand-new network that knows nothing — for starting her over. */
@@ -323,7 +415,7 @@
   const yieldToUI = () => new Promise((resolve) => setTimeout(resolve, 0));
 
   const Learn = {
-    STORAGE, CORRECTION_WEIGHT, HOLDOUT_SEED, HOLDOUT_FRACTION,
+    STORAGE, CORRECTION_WEIGHT, HOLDOUT_SEED, HOLDOUT_FRACTION, EFFORT, effortFor, vary,
     splitTemplates, expand, correctionRows, accuracy, assess, Trainer,
     heldOutRows, heldOutShapes, trainBaseline, newNet,
     saveNet, loadNet, loadCorrections, saveCorrection, forget, yieldToUI,

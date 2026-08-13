@@ -49,6 +49,21 @@ gen    2   59.8%   rejected (best stands at 66.1%)
 gen    3   70.5%   kept — new best 70.5%
 ```
 
+She sizes each round to the machine she is on, so the same command is right
+everywhere:
+
+| Machine | Each round |
+|---|---|
+| A very small board (1 core, under 1GB) | 12 epochs · 4 device names · 1 rewording |
+| A Raspberry Pi | 25 epochs · 8 · 2 |
+| An ordinary computer | 45 epochs · 12 · 2 |
+| A fast machine | 80 epochs · 20 · 3 |
+
+The *architecture* never changes with the machine — only how hard she works.
+That is deliberate: a mind trained overnight on a desktop can be copied
+straight onto a Pi and used there, which would be impossible if a fast machine
+built a network a small one could not load.
+
 Your corrections are replayed four times per round, so she becomes better at
 *your* phrasing specifically. They are training data only — she is never
 examined on the answers you gave her.

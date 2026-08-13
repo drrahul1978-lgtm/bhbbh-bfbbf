@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const Intent = require("./intent.js");
 const Learn = require("./learn.js");
+const platform = require("./eve/platform/detect.js");
 const storage = require("./eve/kernel/storage.js");
 
 const args = process.argv.slice(2);
@@ -33,7 +34,10 @@ const flag = (name, fallback) => {
 
 const WATCH = args.includes("--watch");
 const ROUNDS = parseInt(flag("rounds", WATCH ? "0" : "1"), 10);
-const EPOCHS = parseInt(flag("epochs", "25"), 10);
+/* Only set when you ask for it. Defaulting this to a number would override
+ * whatever the machine can actually take, which is the entire point of
+ * detecting the machine. */
+const EPOCHS = args.includes("--epochs") ? parseInt(flag("epochs", "25"), 10) : null;
 const MODEL = path.resolve(flag("model", "eve-intent.json"));
 const STATS = path.resolve(flag("stats", "eve-intent-stats.json"));
 
@@ -68,11 +72,24 @@ const pct = (v) => (v == null ? "  –  " : `${(v * 100).toFixed(1)}%`);
 
 function main() {
   const { net, stats, from } = load();
-  const trainer = new Learn.Trainer(net, stats, []);
+
+  /* She sizes the work to the machine before doing any of it. The same code
+   * on a Pi Zero and on a workstation should not do the same amount of work —
+   * one would be unusable and the other would be lazy. */
+  const info = platform.detect();
+  const effort = Learn.effortFor(info);
+  const trainer = new Learn.Trainer(net, stats, [], effort);
   if (trainer.best == null) trainer.best = Learn.assess(net);
+
+  const cores = info.resources && info.resources.cores;
+  const memMb = info.resources && info.resources.memoryMb;
 
   console.log(`
   EVE is learning to understand you — from ${from}.
+
+    this machine        ${platform.describe(info)}
+                        ${cores || "?"} core${cores === 1 ? "" : "s"}, ${memMb ? `${(memMb / 1024).toFixed(1)}GB` : "unknown memory"} — ${effort.label}
+    so each round       ${EPOCHS || effort.epochs} epochs${EPOCHS ? " (you asked for that)" : ""} · ${effort.fills} device names per phrasing · ${effort.variations} reworded ${effort.variations === 1 ? "copy" : "copies"}
 
     held back and never trained on   ${Learn.heldOutShapes()} sentence shapes (${Learn.heldOutRows().length} test sentences)
     starting score on those          ${pct(trainer.best)}
@@ -83,7 +100,7 @@ function main() {
   let dirty = false;
 
   const tick = () => {
-    const r = trainer.round({ epochs: EPOCHS });
+    const r = trainer.round(EPOCHS ? { epochs: EPOCHS } : {});
     round++;
     if (r.kept) dirty = true;
 

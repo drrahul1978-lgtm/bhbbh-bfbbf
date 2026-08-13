@@ -56,10 +56,32 @@ async function loadEve() {
 }
 
 function startTrainer(net, stats) {
-  trainer = new Learn.Trainer(net, stats, Learn.loadCorrections());
+  /* The browser cannot read the machine's specs the way the CLI can, so she
+   * sizes the work by what the browser will tell her: cores, and memory if
+   * this browser reports it at all (Safari and Firefox do not). */
+  trainer = new Learn.Trainer(net, stats, Learn.loadCorrections(), browserEffort());
   if (trainer.best == null) trainer.best = Learn.assess(net);
   render();
   drawHistory();
+}
+
+/**
+ * What this browser will admit about the machine.
+ *
+ * navigator.deviceMemory is Chromium-only and rounded; hardwareConcurrency is
+ * widely supported. Both absent means an unknown machine, which Learn treats
+ * as an ordinary one rather than guessing high and freezing a small board.
+ */
+function browserEffort() {
+  const cores = navigator.hardwareConcurrency || null;
+  const memoryMb = navigator.deviceMemory ? navigator.deviceMemory * 1024 : null;
+  let klass = null;
+  if (cores) {
+    if (cores <= 2 || (memoryMb && memoryMb <= 2048)) klass = "constrained";
+    else if (cores >= 8 && (!memoryMb || memoryMb >= 8192)) klass = "roomy";
+    else klass = "modest";
+  }
+  return Learn.effortFor({ class: klass, resources: { cores, memoryMb } });
 }
 
 function setHost(text) { $("hostLine").textContent = text; }
@@ -81,6 +103,12 @@ function render() {
   // the honest number so the gap between them is visible rather than hidden.
   const { train } = Learn.splitTemplates();
   $("statFamiliar").textContent = pct(Learn.accuracy(trainer.net, Learn.expand(train, 4242)));
+
+  const e = trainer.effort;
+  $("effortLine").textContent =
+    `Sized to this machine: ${e.cores ? `${e.cores} cores` : "unknown cores"}` +
+    `${e.memoryMb ? `, ${(e.memoryMb / 1024).toFixed(0)}GB` : ""} — ${e.label}. ` +
+    `Each round: ${e.epochs} epochs, ${e.fills} device names per phrasing, ${e.variations} reworded ${e.variations === 1 ? "copy" : "copies"}.`;
 }
 
 function drawHistory() {

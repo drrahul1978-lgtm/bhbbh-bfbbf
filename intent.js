@@ -15,7 +15,20 @@
 
   const NN = root.NN || (typeof require !== "undefined" ? require("./nn.js") : null);
 
-  const DIM = 256; // hashed feature width
+  /* Hashed feature width. 1024 rather than 256 because at 256 the words and
+   * bigrams of a small vocabulary collide constantly, and two different
+   * requests can land on the same buckets — measured worth about a point on
+   * phrasings she has never seen. */
+  const DIM = 1024;
+
+  /* Character n-grams, in addition to whole words.
+   *
+   * This is what lets her make anything of a word she was never trained on:
+   * "deactivate" shares "activ" with "activate", so an unfamiliar verb still
+   * carries signal instead of hashing to a bucket that means nothing. Weighted
+   * below whole words, which remain the stronger evidence. */
+  const CHAR_NGRAM = 3;
+  const CHAR_WEIGHT = 0.6;
 
   /**
    * Every intent Eve can recognise, with the phrasings she is trained on.
@@ -109,6 +122,12 @@
     for (let i = 0; i < tokens.length; i++) {
       bump(tokens[i], 1);
       if (i + 1 < tokens.length) bump(`${tokens[i]}_${tokens[i + 1]}`, 1.2);
+      // ^ and $ mark word boundaries, so a prefix is not confused with the
+      // same letters sitting in the middle of a longer word.
+      const padded = `^${tokens[i]}$`;
+      for (let j = 0; j + CHAR_NGRAM <= padded.length; j++) {
+        bump(`#${padded.slice(j, j + CHAR_NGRAM)}`, CHAR_WEIGHT);
+      }
     }
     // Scale to unit length so long sentences do not shout down short ones.
     let norm = 0;

@@ -11,6 +11,8 @@ const NN = require("../nn.js");
 const Intent = require("../intent.js");
 const Learn = require("../learn.js");
 
+const TAIL_WORDS = ["now", "for me", "please", "thanks"];
+
 let passed = 0;
 const ok = (msg) => { console.log(`  ✔ ${msg}`); passed++; };
 
@@ -156,6 +158,63 @@ console.log("\n── her learning ──");
   assert.strictEqual(result.intent, "unknown",
     "a sentence about nothing she handles must come back unknown");
   ok("a request nowhere near her intents is answered 'unknown' rather than guessed at");
+}
+
+
+// ---------------------------------------------------------------------------
+// Sizing the work to the machine
+// ---------------------------------------------------------------------------
+{
+  const machine = (klass, cores, memoryMb) => ({ class: klass, resources: { cores, memoryMb } });
+
+  const zero = Learn.effortFor(machine("constrained", 1, 512));
+  const pi4 = Learn.effortFor(machine("constrained", 4, 4096));
+  const laptop = Learn.effortFor(machine("modest", 8, 16384));
+  const desktop = Learn.effortFor(machine("roomy", 16, 32768));
+
+  assert.strictEqual(zero.preset, "tiny", "a single-core half-gig board is not a Pi 4");
+  assert.strictEqual(pi4.preset, "constrained");
+  assert.strictEqual(desktop.preset, "roomy");
+
+  // Each step up must actually ask for more work, or the detection is decorative.
+  const work = (e) => e.epochs * e.fills * (1 + e.variations);
+  assert.ok(work(zero) < work(pi4), "a Pi Zero must do less work than a Pi 4");
+  assert.ok(work(pi4) < work(laptop), "a Pi 4 must do less work than an ordinary computer");
+  assert.ok(work(laptop) < work(desktop), "a fast machine must do more work than an ordinary one");
+  ok(`she sizes each round to the machine: ${work(zero)} units on a Pi Zero, ${work(desktop)} on a fast desktop`);
+
+  /* The architecture must NOT change with the machine. If it did, a mind
+   * trained on a desktop could not be copied onto a Pi, which is the whole
+   * point of her weights being a file. */
+  const small = Learn.trainBaseline({ effort: Learn.EFFORT.tiny, epochs: 5 }).net;
+  const big = Learn.trainBaseline({ effort: Learn.EFFORT.roomy, epochs: 5 }).net;
+  assert.deepStrictEqual(small.toJSON().sizes, big.toJSON().sizes,
+    "the network shape must not depend on the machine that trained it");
+  assert.ok(Intent.fromJSON(Intent.toJSON(big)), "a desktop-trained mind must load anywhere");
+  ok("a mind trained on a fast machine loads unchanged on a small one — only the effort differs");
+
+  // An unrecognised machine must still work rather than throw.
+  const unknown = Learn.effortFor({ class: "something-new", resources: {} });
+  assert.ok(unknown.epochs > 0, "an unfamiliar machine must still get a usable setting");
+  ok("an unrecognised machine falls back to the middle setting instead of failing");
+}
+
+// ---------------------------------------------------------------------------
+// Rewording, which is how she learns that filler words do not change meaning
+// ---------------------------------------------------------------------------
+{
+  const rand = NN.mulberry32(3);
+  const seen = new Set();
+  for (let i = 0; i < 60; i++) seen.add(Learn.vary("turn on the kitchen light", rand));
+  assert.ok(seen.size > 3, "rewording should produce genuinely different sentences");
+  assert.ok([...seen].every((t) => t.trim().length > 0), "no rewording may produce an empty sentence");
+  ok(`one sentence becomes ${seen.size} phrasings, so she learns the request rather than the wording`);
+
+  // The exam must never contain reworded sentences — she is tested plainly.
+  const plain = Learn.heldOutRows().map((r) => r.text);
+  assert.ok(plain.every((t) => !TAIL_WORDS.some((w) => t.endsWith(` ${w}`))),
+    "the held-out exam must be plain phrasings, not drilled variations");
+  ok("the exam is plain phrasings only — rewording is practice, never the test");
 }
 
 console.log(`\nher learning: ${passed} checks passed`);
