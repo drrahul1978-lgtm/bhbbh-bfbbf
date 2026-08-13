@@ -19,15 +19,15 @@ const DIST = path.join(ROOT, "dist");
 
 const SHIP = [
   // Pages
-  "eye.html", "index.html", "train.html", "style.css", "eye.webmanifest",
+  "eye.html", "index.html", "style.css", "eye.webmanifest",
   // Her mind
-  "nn.js", "vision.js", "synth.js", "eve.js", "intent.js",
+  "nn.js", "intent.js", "learn.js",
   "eve/vision/scene.js", "eve/vision/recognise.js",
   // Page logic
-  "eye.js", "app.js", "train.js",
+  "eye.js", "app.js",
   // What she has already learned
-  "eve-model.json", "eve-intent.json",
-  // Adapters, for the studio's chat panel
+  "eve-intent.json",
+  // Writing her own adapters
   "skills.js", "discover.js",
 ];
 
@@ -51,18 +51,17 @@ if (missing.length) {
 }
 
 /* The desktop app opens on her eye — the camera is the reason it exists as an
- * app rather than a page. The other two are a click away from there. */
-fs.copyFileSync(path.join(DIST, "eye.html"), path.join(DIST, "index-web.html"));
-fs.renameSync(path.join(DIST, "index.html"), path.join(DIST, "grader.html"));
+ * app rather than a page. Talking to her is one click from there. */
+fs.renameSync(path.join(DIST, "index.html"), path.join(DIST, "talk.html"));
 fs.renameSync(path.join(DIST, "eye.html"), path.join(DIST, "index.html"));
 
-// The renamed page has to be linked correctly from the others.
-for (const page of ["index.html", "grader.html", "train.html"]) {
+// The renamed pages have to stay linked correctly to each other.
+for (const page of ["index.html", "talk.html"]) {
   const file = path.join(DIST, page);
   let html = fs.readFileSync(file, "utf8");
-  html = html.replace(/href="index\.html"/g, 'href="grader.html"').replace(/href="eye\.html"/g, 'href="index.html"');
+  html = html.replace(/href="index\.html"/g, 'href="talk.html"').replace(/href="eye\.html"/g, 'href="index.html"');
   fs.writeFileSync(file, html);
 }
 
 console.log(`dist/ ready — ${SHIP.length} files, ${(bytes / 1024).toFixed(0)}KB`);
-console.log(`the app opens on her eye; the grader and studio are linked from it`);
+console.log(`the app opens on her eye; talking to her is one click away`);

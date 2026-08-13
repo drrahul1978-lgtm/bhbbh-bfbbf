@@ -4,7 +4,7 @@
  * object and hands it back. Nothing else in EVE should construct these
  * individually, so there is exactly one place where policy is decided.
  *
- * Deliberately additive: the existing card grader, trainer, skill generator and
+ * Deliberately additive: her trainer, skill generator and
  * discovery all still run without a kernel. Booting one turns the safety rails
  * on for every path that asks for them.
  */

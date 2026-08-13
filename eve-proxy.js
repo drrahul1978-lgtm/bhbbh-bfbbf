@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* eve-proxy.js — the Pi holds the key, so nobody else has to.
  *
- * The goal is that a visitor does nothing: open the page, upload a card, get a
- * grade. No settings, no account, no key.
+ * The goal is that a visitor does nothing: open the page and talk to her.
+ * No settings, no account, no key.
  *
  * The way NOT to do that is to put the key in the page. Anything in client-side
  * JavaScript is readable by anyone who opens it — obfuscating it only hides it
@@ -17,10 +17,10 @@
  *   node eve-proxy.js                  serve the site on port 8080
  *   node eve-proxy.js --port 3000
  *   node eve-proxy.js --https          needed for the camera from another machine
- *   node eve-proxy.js --no-review      do not file low-confidence grades
+ *   node eve-proxy.js --no-review      do not file requests she misread
  *
  * There is no API key in this project any more — not here, not in the page, not
- * in the vault. Grading happens in the visitor's browser, and Eve checks her own
+ * in the vault. Everything happens in the visitor's browser, and Eve checks her own
  * work by disagreeing with herself rather than by asking anyone.
  *
  * The rate limits below remain because this server still writes to disk when a
@@ -142,16 +142,13 @@ function rateCheck(address) {
 const addressOf = (req) =>
   (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || "unknown";
 
-/* Nothing here holds a credential any more, and nothing here calls out.
- * The site is served; Eve grades in the browser, and checks her own work by
- * debating herself (eve/debate/). Cases she cannot settle are filed for you. */
+/* Nothing here holds a credential, and nothing here calls out. The site is
+ * served; EVE runs in the browser. Requests she could not confidently
+ * understand are filed for you to settle. */
 const cases = new CaseStore({ file: path.join(eve.config.dataDir, "cases.json"), log, privacy: "disputed_exchange_only" });
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
-
-const GRADING_PROMPT = fs.readFileSync(path.join(__dirname, "app.js"), "utf8")
-  .match(/const GRADING_PROMPT = `([\s\S]*?)`;/)?.[1] || "Grade this trading card and reply with JSON.";
 
 const readBody = (req, limit = 12 * 1024 * 1024) => new Promise((resolve, reject) => {
   let body = "";
@@ -163,15 +160,15 @@ const readBody = (req, limit = 12 * 1024 * 1024) => new Promise((resolve, reject
 });
 
 /**
- * File a disagreement Eve could not settle herself.
+ * File a request EVE could not confidently understand.
  *
- * The browser sends these when her two methods disagree and the measurements
- * did not decide it. Nothing leaves this machine — the case is written to disk
- * for you to rule on, and the photograph is never part of it.
+ * The browser sends these when her confidence falls below her threshold, so
+ * you can tell her what it should have meant. Nothing leaves this machine —
+ * the case is written to disk for you to rule on.
  */
 function fileDisagreement(payload) {
   return cases.open({
-    question: payload.question || "Grade this trading card from a photo",
+    question: payload.question || "What did this request mean?",
     answer: payload.answer,
     why: payload.why || "she was not confident in this one",
     confidence: payload.confidence ?? null,
@@ -187,12 +184,12 @@ const handler = async (req, res) => {
     res.end(typeof body === "string" ? body : JSON.stringify(body));
   };
 
-  // Does this host offer cloud grading? The page asks before deciding what to show.
+  // The page asks what this host can do before deciding what to show.
   if (url.pathname === "/api/health") {
     return send(200, {
-      // No cloud grading exists any more, so the page never looks for one.
-      grading: "local",
-      reviewer: REVIEW ? "low-confidence grades filed for review" : "off",
+      // Everything she does runs in the visitor's browser. There is no other mode.
+      running: "local",
+      reviewer: REVIEW ? "requests she misread are filed for review" : "off",
       host: eve.platform.host,
     });
   }
@@ -259,15 +256,15 @@ function openBrowser(url) {
 }
 
 server.listen(PORT, () => {
-  log.info(`serving on port ${PORT}`, { grading: "local", reviewer: REVIEW });
+  log.info(`serving on port ${PORT}`, { running: "local", reviewer: REVIEW });
   const scheme = HTTPS ? "https" : "http";
   console.log(`\n🧠 EVE is serving on ${scheme}://localhost:${PORT}`);
   console.log(`   ${eve.describe()}`);
-  console.log(`   grading: local — Eve runs in the visitor's browser, no key anywhere`);
+  console.log(`   running: local — EVE runs in the visitor's browser, no key anywhere`);
   if (eve.external?.volumes?.length) {
     console.log(`   plugged in: ${require("./eve/platform/external.js").describe(eve.external.volumes)}`);
   }
-  console.log(`   checking: ${REVIEW ? "low-confidence grades are filed for you" : "off"}`);
+  console.log(`   checking: ${REVIEW ? "requests she misread are filed for you" : "off"}`);
   console.log(`   limits: ${PER_MINUTE}/minute and ${PER_DAY}/day per address${APP_TOKEN ? ", app token required" : ""}`);
   if (!APP_TOKEN) console.log(`   (set EVE_APP_TOKEN to refuse clients that are not yours)`);
   console.log(`\n   Visitors need no key, no account and no settings.`);

@@ -3,7 +3,7 @@
  * This is the same network from nn.js pointed at words instead of pixels. A
  * sentence is hashed into a fixed-width bag of words and bigrams, and the net
  * classifies it into one of a handful of intents. It is trained on phrasings
- * generated right here, so — exactly like her card grading — she learns from
+ * generated right here, so — exactly like everything else she learns — from
  * examples this file creates rather than from any downloaded corpus.
  *
  * Be clear about the ceiling: this recognises *which* of a known set of things
@@ -64,9 +64,10 @@
       "pair with home assistant", "i want to connect home assistant",
       "learn a new api", "teach yourself this api", "write an adapter for this api",
     ],
-    grade_card: [
-      "grade this card", "how good is this card", "what grade is this card",
-      "check my card", "rate this card", "score this card", "grade my pokemon card",
+    what_can_you_do: [
+      "what can you do", "what are you", "who are you", "what do you know",
+      "tell me about yourself", "what have you learned", "what skills do you have",
+      "what apis do you know", "list your skills", "how good are you",
     ],
   };
 

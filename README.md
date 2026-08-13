@@ -1,97 +1,85 @@
-# 🃏 GradeMyCard — AI Trading Card Grader
+# 👁️ EVE — emergent virtual entity
 
-Upload a photo of a **Pokémon, football, baseball or basketball card** and get an
-instant, PSA-style AI condition estimate — centering, corners, edges & surface
-subgrades plus an overall 1–10 grade — powered by **Meta's Llama 4 vision model**.
+An AI written from nothing. No libraries, no pretrained weights, no cloud, no
+API key — the neural networks, the backpropagation, the optimiser and the
+retrieval are all in this repository, in plain JavaScript, with **zero
+dependencies**.
 
-**Live site:** https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/
+She runs on a Raspberry Pi 4 and equally on your own machine. Nothing she sees
+or hears leaves it — not as a policy, but because there is no code in her that
+could send it anywhere.
 
-## Two graders, one site
+## What she does
 
-| | 🃏 The cloud grader | 🧠 Eve |
-|---|---|---|
-| Model | Meta's Llama 4 vision, via an API | A network built from scratch, ~15,000 weights |
-| Needs | An API key + internet | Nothing at all |
-| Accuracy on real cards | Much better | Rough — she learns from the cards you correct |
-| Who owns it | Meta / the provider | You |
+| | |
+|---|---|
+| **Writes her own code** | Ask her to connect to something and she works out the API, generates a real JavaScript adapter, shows you the source, and keeps it as a permanent skill. |
+| **Works out APIs alone** | Three tiers: read the service's own OpenAPI document, infer from the shape of its responses, or search the web. Offline is a normal state, not an error. |
+| **Learns to understand you** | A network that sorts what you say into requests she has a skill for — and gets measurably better at it every round you run. |
+| **Sees** | Describes any camera frame, and recognises the objects you personally taught her. Says *unknown* rather than guessing. |
+| **Remembers** | Four tiers with ranked retrieval and a budget, so memory is searched rather than poured into everything. |
+| **Knows her own limits** | A capability map rated from real runs, including what is unsupported. |
 
-Eve lives at **[train.html](train.html)** — train her, test her, teach her, export
-her brain as a file. She is written in plain JavaScript with no libraries and no
-pretrained weights, and runs happily on a **Raspberry Pi 4**.
-See **[EVE.md](EVE.md)** for how she works, what she can and cannot do, and how to
-train her from the command line.
-
-She can also **connect to your smart home**. Ask her to connect to Home
-Assistant and she writes the adapter herself — real JavaScript, generated for
-your address, shown to you before it runs — then controls your devices from
-plain English. Details and the honest limits are in **[EVE.md](EVE.md)**.
-
-**On Windows?** There is no installer — the browser turns the page into an app.
-See **[WINDOWS.md](WINDOWS.md)**, including the camera catch (Chrome will not
-hand over a camera over plain `http` to anything but `localhost`).
+## Start her
 
 ```bash
-node eve-proxy.js           # serve everything; visitors need no key or account
-npm test                    # verify the maths, the learning and the pipeline
-node eve-train.js --watch   # keep improving her on a Pi, forever
-node eve-connect.js --chat  # talk to your house from the Pi's command line
+node eve-proxy.js --open      # opens her in your browser
 ```
 
-## How it works
+Or double-click **Start EVE** on Windows, **eve.sh** elsewhere. See
+[INSTALL.md](INSTALL.md).
 
-1. Open the site — it works immediately with **🧠 Eve**, who runs in your
-   browser with no key, no account and no network request at all.
-2. Optional: for the much stronger cloud model, add your own key via
-   **⚙️ API Settings** — **Groq** is
-   recommended (free tier, no credit card):
-   create one at [console.groq.com/keys](https://console.groq.com/keys).
-   Your key is stored **only in your browser's localStorage** and sent directly
-   to the AI provider — there is no backend.
-3. Upload (or drag-drop / paste) a photo of your card and hit **Grade my card**.
+## Improve her
 
-The Llama 4 Scout vision model inspects the photo and returns subgrades for
-centering, corners, edges and surface, an overall grade with a PSA-style label
-(Gem Mint → Poor), and grader's notes about specific flaws it spotted.
-
-### Supported providers
-
-| Provider   | Default model                              | Get a key |
-|------------|--------------------------------------------|-----------|
-| Groq       | `meta-llama/llama-4-scout-17b-16e-instruct`| [console.groq.com/keys](https://console.groq.com/keys) |
-| OpenRouter | `meta-llama/llama-4-scout`                 | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| Together   | `meta-llama/Llama-4-Scout-17B-16E-Instruct`| [api.together.ai](https://api.together.ai/settings/api-keys) |
-
-Any OpenAI-compatible vision model name can be typed into the model field.
-
-### Sharing with friends & family (magic link)
-
-You can hand someone a pre-configured link so they don't need their own key:
-
-```
-https://drrahul1978-lgtm.github.io/bhbbh-bfbbf/#key=YOUR_API_KEY
+```bash
+node eve-learn.js             # one round
+node eve-learn.js --watch     # keep improving, overnight, forever
 ```
 
-The key is saved into their browser and instantly removed from the address bar.
-⚠️ Only share this link privately — anyone who has it can use your key. Never
-commit an API key to this (public) repository: GitHub secret scanning will
-revoke it and scrapers will abuse it.
+A quarter of her sentence shapes are **held back and never trained on**. Each
+round practises on the rest, then sits that same fixed exam. New weights are
+kept only if the score improves — otherwise they are thrown away.
 
-## Tips for better grades
+Rounds that get rejected are the mechanism working. Without the gate, "she is
+improving" would mean nothing at all.
 
-- Use bright, even lighting (no glare on the card surface).
-- Shoot straight-on so all four borders are visible.
-- Fill the frame with the card and keep it in sharp focus.
+```
+gen    1   65.2%   rejected (best stands at 66.1%)
+gen    2   59.8%   rejected (best stands at 66.1%)
+gen    3   70.5%   kept — new best 70.5%
+```
 
-## Disclaimer
+Your corrections are replayed four times per round, so she becomes better at
+*your* phrasing specifically. They are training data only — she is never
+examined on the answers you gave her.
 
-This is an AI **estimate** from a single photo — for fun and rough triage only.
-It is not a professional grade. For official grading use PSA, BGS, SGC or CGC.
+## Talk to her
 
-## Development
+```bash
+node eve-connect.js --chat    # no browser, no CORS
+node eve-connect.js --api     # watch her work out an API on her own
+```
 
-It's a plain static site — no build step, no dependencies. The cloud grader is
-`index.html` + `app.js`; Eve is `nn.js`, `vision.js`, `synth.js`, `eve.js` and
-`train.html`.
-Open `index.html` in a browser, or serve it with `python3 -m http.server`.
-Deployment to GitHub Pages happens automatically via the workflow in
-`.github/workflows/deploy.yml`.
+## The rest
+
+- **[EVE.md](EVE.md)** — every file, and what it is for
+- **[INSTALL.md](INSTALL.md)** — getting her onto a PC, a Mac or a Pi
+- **[eve/README.md](eve/README.md)** — the kernel: permissions, audit, health, storage
+- **[eve/memory/README.md](eve/memory/README.md)** — how memory is stored and searched
+- **[eve/vision/README.md](eve/vision/README.md)** — her eye, and what it honestly cannot do
+
+```bash
+npm test          # every subsystem
+npm run test:pi   # would this survive a Raspberry Pi 4?
+npm run whereami  # what machine does she think she is on?
+```
+
+## What she is not
+
+There is **no language model in her**. She classifies requests into intents she
+has skills for; she cannot hold a conversation or explain herself in prose. She
+writes API adapters from machine-readable descriptions, not arbitrary software
+from a sentence. She cannot name an object nobody has shown her.
+
+Each of those is stated because it is true, and each one she will admit to
+rather than bluff past.

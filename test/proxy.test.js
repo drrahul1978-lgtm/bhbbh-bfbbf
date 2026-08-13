@@ -1,4 +1,4 @@
-/* The server holds no credential, grades nothing, and still lets a visitor
+/* The server holds no credential, decides nothing, and still lets a visitor
  * arrive and get an answer. What it does hold is the disagreements Eve could
  * not settle, filed for you.
  * Run with:  node test/proxy.test.js  */
@@ -29,9 +29,9 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
 
     // --- nothing here wants a credential ---
     const health = await fetch(at("/api/health")).then((r) => r.json());
-    assert.strictEqual(health.grading, "local", "grading happens in the visitor's browser now");
+    assert.strictEqual(health.running, "local", "everything she does runs in the visitor's browser");
     assert.match(health.reviewer, /filed/);
-    ok("the server reports that grading is local and low-confidence grades are filed");
+    ok("the server reports that she runs locally and misread requests are filed");
 
     const source = fs.readFileSync(path.join(ROOT, "eve-proxy.js"), "utf8");
     assert.ok(!/api\.groq\.com|GROQ_API_KEY|Authorization: `Bearer/.test(source),
@@ -40,11 +40,11 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     ok("no key, no provider call and no credential anywhere in the server");
 
     // --- a visitor still gets everything they need, with no setup ---
-    for (const asset of ["/index.html", "/app.js", "/eve-model.json"]) {
+    for (const asset of ["/index.html", "/app.js", "/learn.js", "/intent.js", "/eve-intent.json"]) {
       const res = await fetch(at(asset));
       assert.strictEqual(res.status, 200, `${asset} should be served`);
     }
-    ok("Eve and her weights are served, so a visitor arrives ready to grade");
+    ok("EVE and her mind are served, so a visitor arrives ready to talk to her");
 
     const pageJs = await fetch(at("/app.js")).then((r) => r.text());
     assert.ok(!/gsk_[A-Za-z0-9]{20,}/.test(pageJs), "nothing key-shaped should reach the browser");
@@ -54,8 +54,8 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     const filed = await fetch(at("/api/disagreement"), {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        answer: JSON.stringify({ overall: 6.5, corners: 4 }),
-        why: "she was not confident about the corners",
+        answer: JSON.stringify({ intent: "turn_on", confidence: 0.31 }),
+        why: "she was not confident this meant turn on",
         confidence: 0.3,
         transcript: "corner roughness measured 2.4, which is borderline",
       }),
@@ -68,9 +68,9 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
     assert.ok(fs.existsSync(casesFile), "the case should be on disk for you");
     const stored = JSON.parse(fs.readFileSync(casesFile, "utf8"));
     assert.strictEqual(stored.length, 1);
-    assert.match(stored[0].why, /not confident about the corners/);
-    assert.ok(!JSON.stringify(stored).includes("data:image"), "the photograph is never filed");
-    ok("a grade Eve was unsure about is filed for you, without the photo");
+    assert.match(stored[0].why, /not confident this meant turn on/);
+    assert.ok(!JSON.stringify(stored).includes("data:image"), "no image is ever filed");
+    ok("a request EVE misread is filed for you to settle");
 
     // --- the endpoint is still defended, because it writes to the card ---
     let refused = false;
@@ -106,7 +106,7 @@ const at = (p) => `http://127.0.0.1:${port}${p}`;
         catch { await new Promise((r) => setTimeout(r, 100)); }
       }
       assert.ok(health, "the secure server should answer over TLS");
-      assert.strictEqual(health.grading, "local");
+      assert.strictEqual(health.running, "local");
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous ?? "1";
 
       assert.ok(fs.existsSync(path.join(secureDir, "eve-cert.pem")), "it should have made a certificate");

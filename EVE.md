@@ -1,36 +1,40 @@
-# 🧠 Eve — an AI built from scratch
+# 👁️ EVE — an emergent virtual entity
 
-Eve is a neural network written from nothing: no TensorFlow, no PyTorch, no ONNX,
-no pretrained weights, no API key, no server. A handful of plain JavaScript
-files running on your own machine — including a Raspberry Pi 4.
+EVE is written from nothing: no TensorFlow, no PyTorch, no ONNX, no pretrained
+weights, no API key, no server. Plain JavaScript files with zero dependencies,
+running on your own machine — including a Raspberry Pi 4.
 
-She grades trading cards: centering, corners, edges and surface, 1–10 each. She
-also understands spoken-style requests and writes her own adapters for APIs she
-has never met — see the second half of this document.
+She works out what you are asking for, and writes her own code for APIs nobody
+has described to her.
 
 ```
-┌──────────┐   ┌───────────┐   ┌────────┐   ┌────────────┐
-│ synth.js │──▶│ vision.js │──▶│ nn.js  │──▶│  4 grades  │
-│  draws   │   │ measures  │   │ learns │   │  1 – 10    │
-│  cards   │   │  photos   │   │        │   │            │
-└──────────┘   └───────────┘   └────────┘   └────────────┘
+     you type                                    she acts
+        │                                           ▲
+        ▼                                           │
+┌───────────────┐   ┌────────┐   ┌──────────────────────────┐
+│   intent.js   │──▶│ nn.js  │──▶│  skills.js + discover.js │
+│ words → numbers│  │ decides│   │  writes the adapter      │
+└───────────────┘   └────────┘   └──────────────────────────┘
+        ▲                                           │
+        └───────── learn.js ◀───────────────────────┘
+             keeps only what scores better
 ```
 
 | File | What it is |
 |------|-----------|
 | `nn.js` | The network. Dense layers, ReLU, sigmoid, backpropagation, Adam. |
-| `vision.js` | Turns a photo into 199 numbers: finds the card, measures its borders, corners, edges and surface. |
-| `synth.js` | Draws practice cards with known damage — Eve's endless supply of labelled data. |
-| `eve.js` | Eve herself: grading, memory, and the loop that keeps her improving. |
-| `eve-train.js` | Command-line trainer. Runs headless on a Pi. |
-| `intent.js` | Her second brain: the same network pointed at words, so she can tell what you are asking for. |
+| `intent.js` | How she works out what you are asking for — the same network pointed at words. |
+| `learn.js` | The loop that keeps her improving, and the fixed exam she is scored against. |
+| `eve-learn.js` | Command-line trainer. Runs headless on a Pi, overnight. |
+| `discover.js` | Works out an API from its own description, its responses, or the web. |
+| `eve/vision/` | Her eye: describing a frame, and recognising objects you taught her. |
 | `skills.js` | The code generator. Turns a description of an API into a working adapter she writes herself. |
 | `eve-connect.js` | Command line for talking to your smart home from a Pi. |
-| `train.html` | The studio: watch her learn, test her, correct her, and watch her write code. |
+| `index.html` | Talk to her, watch her write code, and watch her learn. |
 
 ## Is she really mine?
 
-Yes, with one honest caveat spelled out.
+Yes.
 
 - **The code** was written for this project. No library is imported, at build time
   or run time. The only outside ingredient is textbook mathematics —
@@ -38,12 +42,11 @@ Yes, with one honest caveat spelled out.
   knowledge owned by nobody, like long division.
 - **The weights** are produced by training on your machine. Nothing was
   downloaded, distilled, or copied from another model.
-- **The data** is drawn by `synth.js` on your machine, plus any real cards you
-  grade yourself.
-- **The caveat:** the *other* grader on this site (`index.html` with a cloud
-  provider selected) calls Meta's Llama 4 through an API. That model is not
-  yours. Eve is the alternative that needs none of it — pick
-  “🧠 Eve — my own AI” in the settings and the site never touches the network.
+- **The data** is generated on your machine from the phrase templates in
+  `intent.js`, plus every correction you give her.
+- **The caveat:** there is no caveat left. The cloud grader this project started
+  as has been removed, along with its provider and its key. Nothing in here
+  calls out to anyone.
 
 ## How she keeps improving
 
@@ -97,10 +100,10 @@ python3 -m http.server 8000
 **Train from the command line**, which is what a headless Pi is good at:
 
 ```bash
-node eve-train.js                       # one round, writes eve-model.json
-node eve-train.js --watch               # keep improving until Ctrl-C
-node eve-train.js --cards 2000 --epochs 200
-node eve-train.js --corrections eve-corrections.json
+node eve-learn.js                       # one round, writes eve-intent.json
+node eve-learn.js --watch               # keep improving until Ctrl-C
+node eve-learn.js --rounds 50 --epochs 40
+
 ```
 
 Useful flags: `--cards`, `--epochs`, `--lr`, `--batch`, `--validation`,
@@ -110,7 +113,7 @@ Useful flags: `--cards`, `--epochs`, `--lr`, `--batch`, `--validation`,
 when the score actually goes down, so it is safe to leave on a Pi overnight:
 
 ```bash
-nohup node eve-train.js --watch --cards 800 --epochs 120 > eve.log 2>&1 &
+nohup node eve-learn.js --watch --epochs 40 > eve.log 2>&1 &
 ```
 
 ### Speed on a Pi 4
@@ -121,7 +124,7 @@ is single-threaded JavaScript either way. Sizes were chosen with that in mind:
 - **Grading one card:** a few hundred milliseconds. The photo is capped at 700px
   before measuring, and the network itself is only ~15,000 weights.
 - **Training:** pick the 🍓 Raspberry Pi preset in the studio (60 cards, 15
-  epochs per round) so the browser stays responsive, or use `eve-train.js` on the
+  epochs per round) so the browser stays responsive, or use `eve-learn.js` on the
   command line, which is faster because it does not have to keep a page alive.
 - **Memory:** the model file is a few hundred KB; training a round holds a few
   hundred feature vectors, which is a handful of megabytes.
@@ -133,12 +136,12 @@ monitor will not lock up while she learns.
 
 Her brain is a JSON file.
 
-- **Export Eve** in the studio → `eve-model.json`. Drop it next to the site and
+- **Export EVE** on her page → `eve-intent.json`. Drop it next to the site and
   every visitor starts from that version.
-- Copy it to a Pi, run `node eve-train.js --watch` to improve it there, and
+- Copy it to a Pi, run `node eve-learn.js --watch` to improve it there, and
   **Import Eve** to bring it back.
 - **Export my corrections** → `eve-corrections.json`, then train with
-  `node eve-train.js --corrections eve-corrections.json`.
+  ``.
 
 ## How good is she?
 

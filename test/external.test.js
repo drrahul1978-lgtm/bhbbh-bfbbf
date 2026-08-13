@@ -28,7 +28,7 @@ function makeVolume(name, layout) {
 (async () => {
   // A drive carrying a full EVE, the way you would prepare one for an offline Pi.
   makeVolume("EVE_DATA", {
-    "eve-data/eve-model.json": JSON.stringify({ format: "gmc-net-1" }),
+    "eve-data/eve-intent.json": JSON.stringify({ format: "gmc-net-1" }),
     "eve-data/eve-intent.json": JSON.stringify({ format: "eve-intent-1" }),
     "eve-data/memories.json": "[]",
     "eve-data/skills/specs": "dir",
@@ -38,7 +38,7 @@ function makeVolume(name, layout) {
   makeVolume("HOLIDAY", { "DCIM/IMG_0001.JPG": "not a card", "notes.txt": "hello" });
   // A drive with just her weights loose at the top, which is how someone would
   // most likely copy them across.
-  makeVolume("SPARE", { "eve-model.json": JSON.stringify({ format: "gmc-net-1" }) });
+  makeVolume("SPARE", { "eve-intent.json": JSON.stringify({ format: "gmc-net-1" }) });
 
   const volumes = ext.scan({ extraPaths: [path.join(tmp, "media")] });
   const names = volumes.map((v) => path.basename(v.volume)).sort();
@@ -71,7 +71,7 @@ function makeVolume(name, layout) {
   // --- local data wins ---
   const settled = path.join(tmp, "settled-pi");
   fs.mkdirSync(settled, { recursive: true });
-  fs.writeFileSync(path.join(settled, "eve-model.json"), JSON.stringify({ format: "gmc-net-1" }));
+  fs.writeFileSync(path.join(settled, "eve-intent.json"), JSON.stringify({ format: "gmc-net-1" }));
   const local = ext.resolveSources({ localDir: settled, volumes });
   assert.strictEqual(local.sources.weights.from, "local",
     "a drive is a source, not an authority — plugging one in must not silently replace her");

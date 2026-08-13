@@ -41,7 +41,7 @@ secure origin, so the camera works and installation is offered — no certificat
 no warnings, nothing to accept.
 
 **The Pi still does the long-running work.** Train there overnight, export
-`eve-model.json` and `eve-eye.json`, and drop them in the Windows folder — or
+`eve-intent.json` and `eve-eye.json`, and drop them in the Windows folder — or
 put them on a USB stick, which she finds by herself
 (see `eve/platform/README-external.md`).
 

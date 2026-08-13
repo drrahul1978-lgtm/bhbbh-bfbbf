@@ -592,3 +592,62 @@ code {
   font-size: 0.95rem;
 }
 .field-row.inline input[type="text"]:focus { outline: 2px solid var(--accent-2); border-color: transparent; }
+
+/* ---------------------------------------------------------------------------
+   EVE's page — what she understood, and what she can do.
+   --------------------------------------------------------------------------- */
+
+.eve-numbers.small .stat-value { font-size: 1.6rem; }
+
+/* The reading she took of your sentence, with the chance to correct it. */
+.understanding {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.understanding .field-row.inline {
+  margin-top: 0.6rem;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.understanding select {
+  min-width: 12rem;
+}
+
+/* Her capability map: what she can do, and what she plainly cannot. */
+.capability-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.capability {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid var(--good, #39d98a);
+  flex-wrap: wrap;
+}
+
+/* Unsupported is stated in the same list rather than left out of it — the
+   honest answer to "what can you do" includes what she cannot. */
+.capability.no {
+  border-left-color: var(--bad, #ff6b6b);
+  opacity: 0.75;
+}
+
+.capability-name { font-weight: 600; }
+
+.capability-detail {
+  font-size: 0.88rem;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}

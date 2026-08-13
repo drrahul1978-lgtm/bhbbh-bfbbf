@@ -214,8 +214,13 @@ async function handle(net, adapter, things, text) {
     return things;
   }
 
-  if (understood.intent === "grade_card") {
-    say("🃏 Card grading lives in the browser studio (train.html) — I need a photo for that.");
+  if (understood.intent === "what_can_you_do") {
+    say(
+      `🧠 I work out what you mean, and I write my own code for APIs nobody has described to me.\n` +
+      `   Connected right now: ${things.length ? `${things.length} things I can see` : "nothing yet — say \"connect to home assistant\""}.\n` +
+      `   Seeing objects lives in my eye (eye.html) — I need a camera for that.\n` +
+      `   What I can't do: hold a conversation. There is no language model in me.`
+    );
     return things;
   }
 

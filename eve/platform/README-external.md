@@ -25,13 +25,13 @@ Pi could take minutes and would not be worth it.
 ## What counts as hers
 
 A drive is only used if it identifies itself: a directory called `eve-data`, or
-`eve.json` / `eve-model.json` at the top. **Someone's holiday photos are left
+`eve.json` / `eve-intent.json` at the top. **Someone's holiday photos are left
 alone** — there is a test for exactly that.
 
 Prepare a drive by copying any of:
 
 ```
-eve-data/eve-model.json      her weights
+eve-data/eve-intent.json     her mind
 eve-data/eve-intent.json     the language model
 eve-data/memories.json       what she knows
 eve-data/skills/             adapters she has written

@@ -31,7 +31,7 @@ function mountRoots() {
   return ["/media", `/media/${os.userInfo().username}`, "/mnt", "/run/media", `/run/media/${os.userInfo().username}`];
 }
 
-const MARKERS = ["eve-data", "eve.json", "eve-model.json"];
+const MARKERS = ["eve-data", "eve.json", "eve-intent.json"];
 
 const readable = (p) => { try { fs.accessSync(p, fs.constants.R_OK); return true; } catch { return false; } };
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
@@ -52,7 +52,7 @@ function inspect(dir) {
     path: root,
     volume: dir,
     markedBy: marker,
-    weights: has("eve-model.json") || fs.existsSync(path.join(dir, "eve-model.json")),
+    weights: has("eve-intent.json") || fs.existsSync(path.join(dir, "eve-intent.json")),
     language: has("eve-intent.json") || fs.existsSync(path.join(dir, "eve-intent.json")),
     memory: has("memory") || has("memories.json"),
     skills: has("skills") || isDir(path.join(dir, "eve-skills")),
@@ -125,7 +125,7 @@ function resolveSources({ localDir = "eve-data", volumes = scan() } = {}) {
     }
   };
 
-  pick("weights", "eve-model.json", "weights");
+  pick("weights", "eve-intent.json", "weights");
   pick("language", "eve-intent.json", "language");
   pick("memory", "memories.json", "memory");
   pick("skills", "skills", "skills");

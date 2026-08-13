@@ -80,10 +80,13 @@ const NODE_BUILTINS = new Set([
   ok(`every one of ${sources.length} files requires only Node built-ins or local files`);
 
   // ══════════════════════════════════ 2. memory under a real workload
-  let peakRss = 0;
-  const sampler = setInterval(() => {
-    peakRss = Math.max(peakRss, process.memoryUsage().rss);
-  }, 25);
+  /* Sampled at each step rather than on a timer. Her heaviest work is
+   * synchronous now, so a setInterval never gets to run between starting and
+   * stopping it — which silently reported a peak of 0MB and looked like a
+   * pass. Explicit readings cannot miss a blocking workload. */
+  let peakRss = process.memoryUsage().rss;
+  const sample = () => { peakRss = Math.max(peakRss, process.memoryUsage().rss); };
+  const sampler = setInterval(sample, 25);
 
   const kernel = require("../eve/kernel/index.js");
   const { Memory } = require("../eve/memory/store.js");
@@ -92,10 +95,8 @@ const NODE_BUILTINS = new Set([
   const { SkillPipeline } = require("../eve/skills/pipeline.js");
   const Skills = require("../skills.js");
   const NN = require("../nn.js");
-  const Vision = require("../vision.js");
-  const Synth = require("../synth.js");
-  const Eve = require("../eve.js");
   const Intent = require("../intent.js");
+  const Learn = require("../learn.js");
 
   const dataDir = path.join(tmp, "data");
   const bootStart = Date.now();
@@ -106,18 +107,16 @@ const NODE_BUILTINS = new Set([
   });
   const bootMs = Date.now() - bootStart;
 
-  // The models she loads at startup, which is the bulk of her memory footprint.
-  const cardModel = JSON.parse(fs.readFileSync(path.join(ROOT, "eve-model.json"), "utf8"));
-  const net = NN.Net.fromJSON(cardModel.net);
+  // The mind she loads at startup, which is the bulk of her memory footprint.
   const intentNet = Intent.fromJSON(JSON.parse(fs.readFileSync(path.join(ROOT, "eve-intent.json"), "utf8")));
-  assert.ok(net && intentNet, "both shipped models should load");
+  assert.ok(intentNet, "her shipped mind should load");
 
-  const modelBytes = fs.statSync(path.join(ROOT, "eve-model.json")).size + fs.statSync(path.join(ROOT, "eve-intent.json")).size;
-  ok(`boot loads both models in ${bootMs}ms`,
-    `≈${(bootMs * PI_SLOWDOWN / 1000).toFixed(1)}s on a Pi (budget ${BUDGET.bootSeconds}s) · models ${(modelBytes / 1024).toFixed(0)}KB on disk`);
+  const modelBytes = fs.statSync(path.join(ROOT, "eve-intent.json")).size;
+  ok(`boot loads her mind in ${bootMs}ms`,
+    `≈${(bootMs * PI_SLOWDOWN / 1000).toFixed(1)}s on a Pi (budget ${BUDGET.bootSeconds}s) · ${(modelBytes / 1024).toFixed(0)}KB on disk`);
   assert.ok(bootMs * PI_SLOWDOWN / 1000 < BUDGET.bootSeconds, "boot would be too slow on a Pi");
 
-  // A busy session: memory, graph, grading, a training round, intent work.
+  // A busy session: memory, graph, understanding a request, a training round.
   const memory = new Memory({ dir: path.join(dataDir, "memory"), saveEveryMs: 100 });
   for (let i = 0; i < 2000; i++) {
     memory.remember({ text: `device ${i} reported status ${i % 7} on the network bridge`, source: "observed" });
@@ -128,6 +127,7 @@ const NODE_BUILTINS = new Set([
     if (i) graph.link(`d${i - 1}`, "CONTAINS", `d${i}`);
   }
 
+  sample();
   const recallStart = Date.now();
   const hits = memory.recall("device status network");
   const recallMs = Date.now() - recallStart;
@@ -137,23 +137,28 @@ const NODE_BUILTINS = new Set([
   ok(`searching 2,000 memories takes ${recallMs}ms`,
     `≈${recallMs * PI_SLOWDOWN}ms on a Pi (budget ${BUDGET.recallMs}ms)`);
 
-  // Grading one card — the vision path, at the size a Pi would use.
-  const card = Synth.generateCard(NN.mulberry32(1), { severity: 0.4 });
-  const gradeStart = Date.now();
-  Eve.grade(net, card.image);
-  const gradeMs = Date.now() - gradeStart;
-  ok(`grading a card takes ${gradeMs}ms`, `≈${gradeMs * PI_SLOWDOWN}ms on a Pi`);
+  sample();
+  // Working out what a request means — what happens on every single message.
+  const understandStart = Date.now();
+  for (let i = 0; i < 20; i++) Intent.understand(intentNet, "turn on the kitchen light", []);
+  const understandMs = (Date.now() - understandStart) / 20;
+  ok(`understanding a request takes ${understandMs.toFixed(1)}ms`,
+    `≈${(understandMs * PI_SLOWDOWN).toFixed(0)}ms on a Pi — she answers as fast as you can type`);
 
-  // One training round at the Pi preset — the heaviest thing she does.
-  const trainer = new Eve.Trainer({ cardsPerRound: 60, epochsPerRound: 15, validationSize: 60 });
+  // One training round — the heaviest thing she does, and the overnight job.
+  const trainer = new Learn.Trainer(intentNet, {});
+  trainer.best = Learn.assess(intentNet);
   const trainStart = Date.now();
-  await trainer.runRound();
+  trainer.round({ epochs: 15 });
   const trainMs = Date.now() - trainStart;
+  sample();
   ok(`one training round (Pi preset) takes ${(trainMs / 1000).toFixed(1)}s`,
     `≈${(trainMs * PI_SLOWDOWN / 1000).toFixed(0)}s on a Pi — run it with --watch, not in the foreground`);
 
   clearInterval(sampler);
+  sample();
   const peakMb = Math.round(peakRss / 1024 / 1024);
+  assert.ok(peakMb > 0, "a peak of zero means the measurement failed, not that nothing was used");
   assert.ok(peakMb < BUDGET.peakMemoryMb, `peak memory ${peakMb}MB exceeds the ${BUDGET.peakMemoryMb}MB budget`);
   ok(`peak memory across the whole workload: ${peakMb}MB`,
     `budget ${BUDGET.peakMemoryMb}MB of the Pi's 4GB — leaves room for the OS and everything else`);

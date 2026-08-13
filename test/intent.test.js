@@ -31,7 +31,7 @@ const HELD_OUT = [
   ["show devices", "list_devices"],
   ["connect to home assistant", "connect"],
   ["write an adapter for this api", "connect"],
-  ["grade this card", "grade_card"],
+  ["what can you do", "what_can_you_do"],
 ];
 
 const results = HELD_OUT.map(([text, expected]) => {

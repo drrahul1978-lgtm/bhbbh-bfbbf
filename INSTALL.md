@@ -40,8 +40,8 @@ can see until you choose to publish it.
 ### What you get
 
 A real desktop application: its own window, its own icon, a Start Menu entry,
-and an uninstaller. It opens on **her eye** — the camera trainer — with the card
-grader and her studio one click away.
+and an uninstaller. It opens on **her eye** — the camera trainer — with the
+conversation one click away.
 
 The camera works with no certificate and no warnings, which is the main reason
 the app exists: a browser refuses a camera to any page that is not on a secure
@@ -133,7 +133,7 @@ installation at all — `chmod +x` it and run it.
 ```bash
 node eve-proxy.js              # serve everything on port 8080
 node eve-proxy.js --https      # needed if another machine wants the camera
-node eve-train.js --watch      # keep training, overnight, forever
+node eve-learn.js --watch      # keep improving, overnight, forever
 node eve-connect.js --chat     # talk to Home Assistant
 ```
 
@@ -149,15 +149,17 @@ Once she is open:
 | What | Where | What to try |
 |---|---|---|
 | **Her eye** | opens first | Turn the camera on. Hold something up, name it, press *Take 8*. Then show her the same thing again — and something else entirely, to watch her say she does not recognise it. |
-| **Card grading** | 🃏 in the header | Drop in a photo of a card. She reads centering, corners, edges and surface, and tells you what she measured. |
-| **Her studio** | 🧠 in the header | Watch her train: every round is scored against cards she never sees, and kept only if it beats her best. Correct a grade and she learns from it. |
-| **Writing her own code** | studio, section 4 | Ask her to *connect to home assistant*. She writes the adapter herself and shows you the code before running it. |
+| **Writing her own code** | 🧠 in the header, section 1 | Ask her to *connect to home assistant*. She works out the API, writes the adapter herself, and shows you the code before it runs. |
+| **Her learning** | 🧠 in the header, section 2 | Hit *Keep improving* and watch rounds get **rejected**. A quarter of her sentence shapes are never trained on, and that is what she is scored against. |
+| **Correcting her** | 🧠 in the header | When she misreads you, tell her what it should have meant. She replays it in every round from then on. |
 
 ### What is worth checking, because it is where systems usually lie
 
 - Show her something she was **never taught**. She should say she does not
   recognise it, not name her nearest guess.
-- Cover the lens. She should say she cannot see, not grade the darkness.
-- In the studio, hit **Keep improving** and watch rounds get **rejected**. Being
-  rolled back is the mechanism working, not failing.
+- Cover the lens. She should say she cannot see, not describe the darkness.
+- Hit **Keep improving** and watch rounds get **rejected**. Being rolled back is
+  the mechanism working, not failing.
+- Compare her two scores. "On phrasings she trained on" will be near-perfect;
+  "on shapes she has never seen" is the honest one, and much lower.
 - Turn off your WiFi and use all of it. Nothing should change.

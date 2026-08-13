@@ -3,117 +3,206 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GradeMyCard — AI Trading Card Grader</title>
-  <meta name="description" content="Upload a photo of your Pokémon, football, baseball or basketball card and get an instant AI-powered condition grade." />
+  <title>EVE — emergent virtual entity</title>
+  <meta name="description" content="An AI built from scratch that writes her own code to work with any API, learns to understand you, and runs entirely on your own machine." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>" />
 </head>
 <body>
   <div class="bg-glow"></div>
 
   <header class="site-header">
     <div class="logo">
-      <span class="logo-icon">🃏</span>
-      <span class="logo-text">Grade<span class="accent">My</span>Card</span>
+      <span class="logo-icon">👁️</span>
+      <span class="logo-text">EVE<span class="accent">.</span></span>
     </div>
     <div class="header-actions">
       <a class="ghost-btn" href="eye.html">👁️ Her eye</a>
-      <a class="ghost-btn" href="train.html" title="Train your own AI">🧠 Meet Eve</a>
     </div>
   </header>
 
   <main>
     <section class="hero">
-      <h1>AI-powered card grading,<br /><span class="accent">in seconds.</span></h1>
+      <h1>She writes her own code.<br /><span class="accent">Watch her do it.</span></h1>
       <p class="subtitle">
-        Snap a photo of your Pokémon, football, baseball or basketball card and get an
-        instant PSA-style condition estimate — centering, corners, edges &amp; surface.
-        No account, no key, no upload: <a href="train.html">Eve</a> grades it in your
-        browser, on your device.
+        EVE is an emergent virtual entity — a neural network written from nothing, with no
+        libraries, no pretrained weights and no cloud. Ask her to connect to something and
+        she works out the API and writes the adapter herself. Everything below runs on this
+        machine; nothing is uploaded, and there is no key anywhere.
       </p>
     </section>
 
-    <!-- Upload area -->
+    <!-- Live status -->
     <section class="card panel">
-      <h2>1️⃣ Upload your card</h2>
-      <div id="dropZone" class="drop-zone" tabindex="0">
-        <input type="file" id="fileInput" accept="image/*" hidden />
-        <div id="dropPlaceholder">
-          <div class="drop-icon">📸</div>
-          <p><strong>Click, drag &amp; drop, or paste</strong> a photo of the card's front</p>
-          <p class="hint">Tip: bright, even lighting and a straight-on angle give the best grades</p>
+      <div class="eve-numbers">
+        <div class="stat">
+          <div class="stat-value" id="statUnderstanding">–</div>
+          <div class="stat-label">understands unseen phrasings</div>
         </div>
-        <img id="preview" class="preview hidden" alt="Card preview" />
+        <div class="stat">
+          <div class="stat-value" id="statGen">0</div>
+          <div class="stat-label">generations</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statSkills">0</div>
+          <div class="stat-label">adapters she wrote</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statCorrections">0</div>
+          <div class="stat-label">your corrections</div>
+        </div>
       </div>
-      <div class="upload-actions hidden" id="uploadActions">
-        <button id="changePhoto" class="ghost-btn">🔄 Change photo</button>
+      <p class="hint" id="hostLine">Working out where she is running…</p>
+    </section>
+
+    <!-- Talk to her -->
+    <section class="card panel">
+      <h2>1️⃣ Talk to her — and watch her write code</h2>
+      <p class="hint">
+        Ask her to <strong>connect to home assistant</strong> and she writes the adapter
+        herself: real JavaScript, generated from the API's own description, shown to you
+        before it ever runs. Honest limit: she is not a chatbot and has no language model.
+        She sorts what you say into requests she has a skill for.
+      </p>
+
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder='Try: "connect to home assistant" or "what can you do"…' autocomplete="off" />
+        <button id="chatSend" class="primary-btn small">Send</button>
+      </div>
+
+      <!-- What she understood, and the chance to correct it -->
+      <div id="understanding" class="understanding hidden">
+        <p class="hint" id="understoodLine"></p>
+        <div class="field-row inline">
+          <label for="correctIntent">She got that wrong? It should be</label>
+          <select id="correctIntent"></select>
+          <button id="saveCorrection" class="ghost-btn small">Teach her</button>
+        </div>
+      </div>
+
+      <!-- Shown when she needs connection details -->
+      <div id="connectForm" class="connect-form hidden">
+        <h4>🔌 Connecting to Home Assistant</h4>
+        <p class="hint">
+          The token stays on this machine and is never written into the code she generates.
+          Browser note: your Home Assistant must allow this site under
+          <code>http.cors_allowed_origins</code> — or skip CORS entirely with
+          <code>node eve-connect.js --chat</code> on the Pi itself.
+        </p>
+        <div class="field-row">
+          <label for="haUrl">Address</label>
+          <input type="text" id="haUrl" placeholder="http://homeassistant.local:8123" spellcheck="false" />
+        </div>
+        <div class="field-row">
+          <label for="haToken">Long-lived access token</label>
+          <input type="password" id="haToken" placeholder="From your HA profile → Security" autocomplete="off" />
+        </div>
+        <div class="field-row right">
+          <button id="haConnect" class="primary-btn small">Write the adapter &amp; connect</button>
+        </div>
+      </div>
+
+      <!-- The code she wrote -->
+      <div id="skillCodeWrap" class="hidden">
+        <h4>📜 The code she wrote for this</h4>
+        <pre class="skill-code" id="skillCode"></pre>
       </div>
     </section>
 
-    <!-- Grade button -->
-    <section class="grade-action">
-      <button id="gradeBtn" class="primary-btn" disabled>🔍 Grade my card</button>
-      <p id="statusMsg" class="status-msg"></p>
+    <!-- Her learning -->
+    <section class="card panel">
+      <h2>2️⃣ Watch her get better at understanding you</h2>
+      <p class="hint">
+        A quarter of her sentence shapes are held back and <strong>never trained on</strong>.
+        Every round practises on the rest and is then sat against that same fixed exam —
+        new weights are kept <em>only if the score improves</em>, otherwise they are thrown
+        away. Rounds that get rejected are the mechanism working.
+      </p>
+
+      <div class="train-controls">
+        <button id="trainOnceBtn" class="primary-btn small">▶️ Train one round</button>
+        <button id="trainForeverBtn" class="primary-btn small">♾️ Keep improving</button>
+        <button id="stopBtn" class="ghost-btn" disabled>⏹ Stop</button>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="status-msg" id="trainStatus">Idle.</p>
+      </div>
+
+      <canvas id="lossCanvas" class="loss-canvas" width="700" height="220" aria-label="Her accuracy on unseen phrasings over time"></canvas>
+
+      <div class="eve-numbers small">
+        <div class="stat">
+          <div class="stat-value" id="statFamiliar">–</div>
+          <div class="stat-label">on phrasings she trained on</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statUnseen">–</div>
+          <div class="stat-label">on shapes she has never seen</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statKept">0</div>
+          <div class="stat-label">rounds kept</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statRejected">0</div>
+          <div class="stat-label">rounds rejected</div>
+        </div>
+      </div>
+      <p class="hint">
+        The gap between those first two numbers is the honest one. The first says she can
+        repeat what she was taught; the second says whether she actually generalises.
+      </p>
     </section>
 
-    <!-- Results -->
-    <section id="results" class="card panel results hidden">
-      <div class="results-header">
-        <div>
-          <h2 id="cardName">Card</h2>
-          <p id="cardMeta" class="card-meta"></p>
-        </div>
-        <div class="grade-badge">
-          <div class="grade-number" id="gradeNumber">–</div>
-          <div class="grade-label" id="gradeLabel">GRADE</div>
-        </div>
-      </div>
-
-      <div class="subgrades">
-        <div class="subgrade" data-key="centering">
-          <div class="subgrade-top"><span>📐 Centering</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-        <div class="subgrade" data-key="corners">
-          <div class="subgrade-top"><span>📍 Corners</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-        <div class="subgrade" data-key="edges">
-          <div class="subgrade-top"><span>📏 Edges</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-        <div class="subgrade" data-key="surface">
-          <div class="subgrade-top"><span>✨ Surface</span><span class="subgrade-value">–</span></div>
-          <div class="bar"><div class="bar-fill"></div></div>
-        </div>
-      </div>
-
-      <div class="observations">
-        <h3>👁️ Grader's notes</h3>
-        <ul id="observationList"></ul>
-      </div>
-
-      <p class="confidence">AI confidence: <span id="confidenceValue">–</span></p>
-
-      <div class="disclaimer">
-        ⚠️ This is an AI <em>estimate</em> from a single photo, for fun and rough triage only.
-        It is not a professional grade — lighting, focus and angle heavily affect results.
-        For official grading, use PSA, BGS, SGC or CGC.
-      </div>
+    <!-- Her skills -->
+    <section class="card panel">
+      <h2>3️⃣ What she can do, from evidence</h2>
+      <p class="hint">
+        Rated from her real run history rather than declared — a skill that starts failing
+        is downgraded on its own. She also admits what is unsupported.
+      </p>
+      <div id="capabilityList" class="capability-list"></div>
     </section>
+
+    <!-- Her brain is a file -->
+    <section class="card panel">
+      <h2>4️⃣ Her mind is a file</h2>
+      <p class="hint">
+        Her weights are just numbers. Export them, copy them to a Raspberry Pi, keep
+        training there with <code>node eve-learn.js --watch</code>, and bring them back.
+      </p>
+      <div class="train-controls">
+        <button id="exportModel" class="ghost-btn">⬇️ Export EVE</button>
+        <button id="importModelBtn" class="ghost-btn">⬆️ Import EVE</button>
+        <input type="file" id="importModel" accept="application/json" hidden />
+        <button id="resetModel" class="ghost-btn danger">🗑️ Start her over</button>
+      </div>
+      <p class="status-msg" id="fileStatus"></p>
+    </section>
+
+    <div class="disclaimer">
+      ⚠️ EVE has no language model in her. She classifies what you say into requests she
+      has a skill for, writes adapters for APIs that describe themselves, and recognises
+      objects you personally taught her. She cannot hold a conversation, program arbitrary
+      software, or name something she has never been shown — and she says so rather than
+      guessing.
+    </div>
   </main>
 
   <footer class="site-footer">
-    <p>🧠 Graded by <a href="train.html">Eve</a> — a neural network built from scratch, running entirely on your device. No key, no account, no upload.</p>
+    <p>EVE · emergent virtual entity · built from scratch — no libraries, no API key, nothing leaves this device.</p>
   </footer>
 
   <script src="nn.js"></script>
-  <script src="vision.js"></script>
-  <script src="synth.js"></script>
-  <script src="eve.js"></script>
+  <script src="intent.js"></script>
+  <script src="learn.js"></script>
+  <script src="skills.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -136,7 +136,7 @@
    * A stack of Dense layers.
    *   sizes: [inputs, hidden…, outputs] e.g. [188, 48, 24, 4]
    * Hidden layers use ReLU; the output layer is a sigmoid, so every prediction
-   * lands in 0…1 and can be rescaled to a 1–10 card grade.
+   * lands in 0…1, which is what a classifier's confidences need to be.
    */
   class Net {
     constructor(sizes, opts = {}) {
