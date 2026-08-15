@@ -534,3 +534,83 @@ chatSay = function (text, who = "eve", thinking = false) {
 };
 
 if (!VoiceKit.Ears.available) $("voiceNote").textContent = `ℹ️ ${VoiceKit.Ears.reason}`;
+
+// ---------------------------------------------------------------------------
+// Her own ears — the ones that work inside the app
+// ---------------------------------------------------------------------------
+const localEars = VoiceKit.LocalEars.available ? new VoiceKit.LocalEars({}) : null;
+
+function showPhrases() {
+  if (!localEars) return;
+  const names = localEars.phrases;
+  $("phraseList").textContent = names.length
+    ? `She knows: ${names.map((n) => `“${n}”`).join(", ")}.`
+    : "She knows no spoken commands yet. Teach her one — say it five or six times.";
+}
+
+/** A spoken phrase is just another way of typing it, so it goes the same route. */
+async function actOnPhrase(phrase) {
+  $("heardLine").textContent = `“${phrase}”`;
+  await handleChat(phrase);
+}
+
+if (localEars) {
+  $("teachPhraseBtn").addEventListener("click", async () => {
+    const phrase = prompt("What should she learn to hear?\n\nType it the way you would type it to her, e.g. “turn on the kitchen light”.");
+    if (!phrase) return;
+    const btn = $("teachPhraseBtn");
+    btn.disabled = true;
+    btn.classList.add("active");
+    btn.textContent = "🔴 Say it now…";
+    try {
+      const result = await localEars.teach(phrase.trim());
+      $("voiceNote").textContent = result.ok
+        ? `Heard it — “${result.phrase}” now has ${result.examples} example${result.examples === 1 ? "" : "s"}. ` +
+          `${result.examples < 5 ? "Do that a few more times; five or six is where she becomes reliable." : "That is enough to be reliable."}`
+        : `⚠️ ${result.why}`;
+      showPhrases();
+    } catch (err) {
+      $("voiceNote").textContent = `⚠️ ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("active");
+      btn.textContent = "🎧 Teach her a spoken command";
+    }
+  });
+
+  $("hearBtn").addEventListener("click", async () => {
+    const btn = $("hearBtn");
+    btn.disabled = true;
+    btn.classList.add("active");
+    btn.textContent = "🔴 Listening…";
+    try {
+      const result = await localEars.listenOnce();
+      if (result.phrase) {
+        $("voiceNote").textContent = `Heard “${result.phrase}” (${(result.confidence * 100).toFixed(0)}% sure).`;
+        await actOnPhrase(result.phrase);
+      } else {
+        $("voiceNote").textContent = `🤔 ${result.why}`;
+        $("heardLine").textContent = result.why;
+      }
+    } catch (err) {
+      $("voiceNote").textContent = `⚠️ ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("active");
+      btn.textContent = "👂 Listen (her own ears)";
+    }
+  });
+
+  showPhrases();
+} else {
+  $("teachPhraseBtn").disabled = true;
+  $("hearBtn").disabled = true;
+  $("phraseList").textContent = "This browser will not give a page a microphone here.";
+}
+
+/* Browser dictation is the optional extra, not the main event, so its absence
+ * is stated as a limitation of the browser rather than of her. */
+if (!VoiceKit.Ears.available) {
+  $("listenBtn").disabled = true;
+  $("listenBtn").title = VoiceKit.Ears.reason;
+}

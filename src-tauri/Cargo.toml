@@ -25,3 +25,12 @@ lto = true
 opt-level = "s"
 panic = "abort"
 strip = true
+
+# Windows only: the webview refuses the camera and microphone until something
+# answers its permission request, and nothing in the default shell does.
+[target.'cfg(target_os = "windows")'.dependencies]
+webview2-com = "0.38"
+windows = { version = "0.61", features = ["Win32_Foundation"] }
+# Versions match what Tauri already resolves to (webview2-com 0.38.2, windows
+# 0.61.3). A different major pulls a second, incompatible copy of the same COM
+# types and the build fails on a type mismatch that reads like nonsense.

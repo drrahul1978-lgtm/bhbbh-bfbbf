@@ -124,12 +124,15 @@
       </p>
 
       <div class="train-controls">
-        <button id="listenBtn" class="primary-btn small">🎙️ Start listening</button>
+        <button id="teachPhraseBtn" class="primary-btn small">🎧 Teach her a spoken command</button>
+        <button id="hearBtn" class="primary-btn small">👂 Listen (her own ears)</button>
+        <button id="listenBtn" class="ghost-btn small">🎙️ Browser dictation</button>
         <button id="watchBtn" class="primary-btn small">👁️ Open her eye</button>
         <label class="speak-toggle"><input type="checkbox" id="speakBack" /> 🔊 Answer out loud</label>
       </div>
 
       <p class="hint" id="voiceNote"></p>
+      <p class="hint" id="phraseList"></p>
 
       <div class="sense-row">
         <div class="sense-eye">
@@ -143,13 +146,17 @@
       </div>
 
       <div class="disclaimer subtle">
-        ⚠️ <strong>Listening is the one thing she does that is not local.</strong> Turning
-        words into sound needs an acoustic model trained on thousands of hours of speech,
-        which cannot be written from scratch or trained on a Pi — so this uses the
-        browser's own recogniser, and Chrome and Edge send that audio to their servers.
-        It stays off until you switch it on, and typing does everything voice does.
-        Her camera is different: seeing is done by code in this project, and those frames
-        never leave the machine.
+        👂 <strong>Her own ears work everywhere, including in the app, and never leave
+        this machine.</strong> They are built from scratch — an FFT, mel-spaced bands and
+        the same nearest-match approach as her eye — so she learns <em>your</em> voice
+        saying <em>your</em> commands. Teach a phrase five or six times and she knows it.
+        She cannot transcribe speech she was never taught, and says so rather than
+        guessing.
+        <br /><br />
+        🎙️ <strong>Browser dictation</strong> is the alternative: it turns any sentence
+        into text, but it only exists in Chrome and Edge, and those send your audio to
+        their servers. It is the one thing here that leaves the device, it stays off
+        until you press it, and typing does everything it does.
       </div>
     </section>
 
@@ -244,6 +251,7 @@
   <script src="intent.js"></script>
   <script src="learn.js"></script>
   <script src="eve/vision/scene.js"></script>
+  <script src="hearing.js"></script>
   <script src="voice.js"></script>
   <script src="skills.js"></script>
   <script src="app.js"></script>

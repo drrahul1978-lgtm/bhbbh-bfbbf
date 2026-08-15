@@ -206,7 +206,102 @@
     get running() { return !!this.stream; }
   }
 
-  const VoiceKit = { Ears, Voice, Watching };
+  /**
+   * Her own ears — the ones that work everywhere, including inside the app.
+   *
+   * Records a short clip from the microphone and hands it to hearing.js, which
+   * is entirely local. She only knows phrases you taught her, which is a real
+   * limit and the reason the browser recogniser is still offered alongside it
+   * where it exists.
+   */
+  class LocalEars {
+    constructor({ onResult, seconds = 2 } = {}) {
+      this.onResult = onResult || (() => {});
+      this.seconds = seconds;
+      this.stream = null;
+      this.context = null;
+      this.hearing = new root.Hear.Hearing(load());
+    }
+
+    static get available() {
+      return !!(root.navigator?.mediaDevices?.getUserMedia && (root.AudioContext || root.webkitAudioContext));
+    }
+
+    async open() {
+      if (this.stream) return;
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const Ctx = root.AudioContext || root.webkitAudioContext;
+      this.context = new Ctx();
+      if (this.context.state === "suspended") await this.context.resume();
+    }
+
+    /** Record for a moment and return the samples at her working rate. */
+    async record() {
+      await this.open();
+      const source = this.context.createMediaStreamSource(this.stream);
+      /* ScriptProcessor rather than an AudioWorklet: a worklet needs its own
+       * module file fetched at runtime, which the app's content policy blocks.
+       * Deprecated, present everywhere, and this records a couple of seconds
+       * rather than running continuously. */
+      const node = this.context.createScriptProcessor(4096, 1, 1);
+      const chunks = [];
+      node.onaudioprocess = (e) => chunks.push(Float32Array.from(e.inputBuffer.getChannelData(0)));
+      source.connect(node);
+      node.connect(this.context.destination);
+
+      await new Promise((resolve) => setTimeout(resolve, this.seconds * 1000));
+      node.disconnect();
+      source.disconnect();
+      node.onaudioprocess = null;
+
+      let length = 0;
+      for (const c of chunks) length += c.length;
+      const joined = new Float32Array(length);
+      let at = 0;
+      for (const c of chunks) { joined.set(c, at); at += c.length; }
+      return root.Hear.resample(joined, this.context.sampleRate);
+    }
+
+    async teach(phrase) {
+      const samples = await this.record();
+      if (root.Hear.rms(samples) < root.Hear.SILENCE_RMS) {
+        return { ok: false, why: "I heard nothing that time — say it while the button is red." };
+      }
+      const held = this.hearing.learn(phrase, samples);
+      save(this.hearing);
+      return { ok: true, phrase, examples: held.examples };
+    }
+
+    async listenOnce() {
+      const result = this.hearing.recognise(await this.record());
+      this.onResult(result);
+      return result;
+    }
+
+    forget() {
+      this.hearing = new root.Hear.Hearing();
+      save(this.hearing);
+    }
+
+    close() {
+      for (const t of this.stream?.getTracks() || []) t.stop();
+      this.stream = null;
+      this.context?.close();
+      this.context = null;
+    }
+
+    get phrases() { return this.hearing.names; }
+  }
+
+  const STORE = "eve.hearing";
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { return {}; }
+  }
+  function save(hearing) {
+    try { localStorage.setItem(STORE, JSON.stringify(hearing.toJSON())); } catch { /* full */ }
+  }
+
+  const VoiceKit = { Ears, Voice, Watching, LocalEars };
   root.VoiceKit = VoiceKit;
   if (typeof module !== "undefined" && module.exports) module.exports = VoiceKit;
 })(typeof self !== "undefined" ? self : globalThis);
