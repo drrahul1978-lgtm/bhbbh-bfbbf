@@ -192,7 +192,11 @@ function getAdapter() {
 async function handle(net, adapter, things, text) {
   const understood = Intent.understand(net, text, things);
 
-  if (understood.confidence < 0.35) {
+  /* Ask the classifier whether it is sure, rather than keeping a second copy
+   * of the threshold here. This file used to test `confidence < 0.35` and was
+   * silently left behind when intent.js raised its own line to 0.5 — she went
+   * on acting on requests she had already decided she did not understand. */
+  if (understood.intent === "unknown") {
     say(`🤔 I did not follow that. Try "turn on the kitchen light", "is the fan on", or "list devices".`);
     return things;
   }

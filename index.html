@@ -113,9 +113,49 @@
       </div>
     </section>
 
+
+    <!-- Voice and eye together -->
+    <section class="card panel">
+      <h2>2️⃣ Talk to her out loud, while she watches</h2>
+      <p class="hint">
+        Her ears and her eye at the same time: say what you want while the camera
+        is on, and she answers aloud. Everything she does with what she hears and
+        sees happens on this machine.
+      </p>
+
+      <div class="train-controls">
+        <button id="listenBtn" class="primary-btn small">🎙️ Start listening</button>
+        <button id="watchBtn" class="primary-btn small">👁️ Open her eye</button>
+        <label class="speak-toggle"><input type="checkbox" id="speakBack" /> 🔊 Answer out loud</label>
+      </div>
+
+      <p class="hint" id="voiceNote"></p>
+
+      <div class="sense-row">
+        <div class="sense-eye">
+          <video id="voiceVideo" playsinline muted></video>
+          <canvas id="voiceCanvas" class="hidden"></canvas>
+          <p class="status-msg" id="sceneLine">Her eye is closed.</p>
+        </div>
+        <div class="sense-ear">
+          <p class="heard" id="heardLine">Not listening.</p>
+        </div>
+      </div>
+
+      <div class="disclaimer subtle">
+        ⚠️ <strong>Listening is the one thing she does that is not local.</strong> Turning
+        words into sound needs an acoustic model trained on thousands of hours of speech,
+        which cannot be written from scratch or trained on a Pi — so this uses the
+        browser's own recogniser, and Chrome and Edge send that audio to their servers.
+        It stays off until you switch it on, and typing does everything voice does.
+        Her camera is different: seeing is done by code in this project, and those frames
+        never leave the machine.
+      </div>
+    </section>
+
     <!-- Her learning -->
     <section class="card panel">
-      <h2>2️⃣ Watch her get better at understanding you</h2>
+      <h2>3️⃣ Watch her get better at understanding you</h2>
       <p class="hint">
         A quarter of her sentence shapes are held back and <strong>never trained on</strong>.
         Every round practises on the rest and is then sat against that same fixed exam —
@@ -163,7 +203,7 @@
 
     <!-- Her skills -->
     <section class="card panel">
-      <h2>3️⃣ What she can do, from evidence</h2>
+      <h2>4️⃣ What she can do, from evidence</h2>
       <p class="hint">
         Rated from her real run history rather than declared — a skill that starts failing
         is downgraded on its own. She also admits what is unsupported.
@@ -173,7 +213,7 @@
 
     <!-- Her brain is a file -->
     <section class="card panel">
-      <h2>4️⃣ Her mind is a file</h2>
+      <h2>5️⃣ Her mind is a file</h2>
       <p class="hint">
         Her weights are just numbers. Export them, copy them to a Raspberry Pi, keep
         training there with <code>node eve-learn.js --watch</code>, and bring them back.
@@ -203,6 +243,8 @@
   <script src="nn.js"></script>
   <script src="intent.js"></script>
   <script src="learn.js"></script>
+  <script src="eve/vision/scene.js"></script>
+  <script src="voice.js"></script>
   <script src="skills.js"></script>
   <script src="app.js"></script>
 </body>

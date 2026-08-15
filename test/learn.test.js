@@ -11,7 +11,11 @@ const NN = require("../nn.js");
 const Intent = require("../intent.js");
 const Learn = require("../learn.js");
 
-const TAIL_WORDS = ["now", "for me", "please", "thanks"];
+/* Tests use the smallest effort preset unless the point of the test is the
+ * quality of a trained model. The gate, the rollback and the bookkeeping
+ * behave identically at 12 epochs and at 80, and the suite should not take
+ * minutes to say so. */
+const QUICK = { ...Learn.EFFORT.tiny, preset: "tiny" };
 
 let passed = 0;
 const ok = (msg) => { console.log(`  ✔ ${msg}`); passed++; };
@@ -59,8 +63,8 @@ console.log("\n── her learning ──");
 // Training on everything is caught, not rewarded
 // ---------------------------------------------------------------------------
 {
-  const cheat = Intent.train().net;               // trained on every template
-  const honest = Learn.trainBaseline();           // trained on the allowed three quarters
+  const cheat = Intent.train().net;                                   // saw the exam
+  const honest = Learn.trainBaseline({ effort: QUICK, epochs: 40 });  // did not
 
   const cheatScore = Learn.assess(cheat);
   assert.ok(cheatScore > 0.95,
@@ -74,7 +78,7 @@ console.log("\n── her learning ──");
 // The gate
 // ---------------------------------------------------------------------------
 {
-  const trainer = new Learn.Trainer(Learn.newNet(7), {});
+  const trainer = new Learn.Trainer(Learn.newNet(7), {}, [], QUICK);
   trainer.best = Learn.assess(trainer.net);
 
   let sawRejection = false;
@@ -103,7 +107,7 @@ console.log("\n── her learning ──");
 // A rejected round changes nothing at all
 // ---------------------------------------------------------------------------
 {
-  const trainer = new Learn.Trainer(Learn.trainBaseline().net, {});
+  const trainer = new Learn.Trainer(Learn.trainBaseline({ effort: QUICK, epochs: 20 }).net, {}, [], QUICK);
   trainer.best = Learn.assess(trainer.net);
   /* Snapshot before *each* round rather than once at the start: a kept round
    * is supposed to change her weights, so comparing across one would fail for
@@ -153,7 +157,7 @@ console.log("\n── her learning ──");
 // She still admits when she does not know
 // ---------------------------------------------------------------------------
 {
-  const net = Learn.trainBaseline().net;
+  const net = Learn.trainBaseline({ effort: QUICK, epochs: 40 }).net;
   const result = Intent.classify(net, "photosynthesis in mangrove root systems");
   assert.strictEqual(result.intent, "unknown",
     "a sentence about nothing she handles must come back unknown");
@@ -210,11 +214,49 @@ console.log("\n── her learning ──");
   assert.ok([...seen].every((t) => t.trim().length > 0), "no rewording may produce an empty sentence");
   ok(`one sentence becomes ${seen.size} phrasings, so she learns the request rather than the wording`);
 
-  // The exam must never contain reworded sentences — she is tested plainly.
-  const plain = Learn.heldOutRows().map((r) => r.text);
-  assert.ok(plain.every((t) => !TAIL_WORDS.some((w) => t.endsWith(` ${w}`))),
-    "the held-out exam must be plain phrasings, not drilled variations");
+  /* The exam must contain no reworded sentences. Checking for tail words is
+   * not the way — real templates end in "please" and "now" — so compare the
+   * exam against a rebuild with rewording explicitly off. */
+  const { validate } = Learn.splitTemplates();
+  const plain = Learn.expand(validate, Learn.HOLDOUT_SEED + 1, { fills: 8, variations: 0 });
+  assert.deepStrictEqual(
+    Learn.heldOutRows().map((r) => r.text),
+    plain.map((r) => r.text),
+    "the exam must be plain expansions, with no reworded copies in it");
+
+  const drilled = Learn.expand(validate, Learn.HOLDOUT_SEED + 1, { fills: 8, variations: 2 });
+  assert.ok(drilled.length > plain.length, "rewording should add rows when it is asked for");
   ok("the exam is plain phrasings only — rewording is practice, never the test");
+}
+
+// ---------------------------------------------------------------------------
+// The vocabulary itself
+// ---------------------------------------------------------------------------
+{
+  const { analyse } = require("../tools/check-vocabulary.js");
+  const { total, problems, orphans } = analyse(Intent.INTENTS);
+
+  /* Ceilings rather than zero. Some overlap is real language — "{thing} on"
+   * genuinely does resemble "is the {thing} on", and refusing every such
+   * phrasing would make her worse at things people actually say. What must not
+   * happen is the drift that made a wider vocabulary six points worse than the
+   * one it replaced. */
+  const collisionRate = problems.length / total;
+  const orphanRate = orphans.length / total;
+
+  assert.ok(collisionRate < 0.15,
+    `${problems.length} of ${total} phrasings look more like another intent (${(collisionRate * 100).toFixed(0)}%) — adding phrasings has drifted`);
+  ok(`${(collisionRate * 100).toFixed(0)}% of phrasings resemble another intent more than their own — under the 15% ceiling`);
+
+  assert.ok(orphanRate < 0.08,
+    `${orphans.length} of ${total} phrasings share almost nothing with their own intent (${(orphanRate * 100).toFixed(0)}%) — those are unlearnable when held out`);
+  ok(`${(orphanRate * 100).toFixed(0)}% of phrasings are orphans with no sibling to learn from — under the 8% ceiling`);
+
+  // She should genuinely understand most unfamiliar phrasings now.
+  const scored = Learn.assess(Learn.trainBaseline({ effort: QUICK, epochs: 60 }).net);
+  assert.ok(scored > 0.85,
+    `she scores ${(scored * 100).toFixed(1)}% on unseen phrasings, which is below what this vocabulary achieved`);
+  ok(`she reads ${(scored * 100).toFixed(1)}% of never-seen phrasings correctly`);
 }
 
 console.log(`\nher learning: ${passed} checks passed`);

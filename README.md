@@ -17,6 +17,7 @@ could send it anywhere.
 | **Works out APIs alone** | Three tiers: read the service's own OpenAPI document, infer from the shape of its responses, or search the web. Offline is a normal state, not an error. |
 | **Learns to understand you** | A network that sorts what you say into requests she has a skill for — and gets measurably better at it every round you run. |
 | **Sees** | Describes any camera frame, and recognises the objects you personally taught her. Says *unknown* rather than guessing. |
+| **Hears and answers aloud** | Talk to her while the camera is open, and she replies out loud. The one caveat in this project — see below. |
 | **Remembers** | Four tiers with ranked retrieval and a budget, so memory is searched rather than poured into everything. |
 | **Knows her own limits** | A capability map rated from real runs, including what is unsupported. |
 
@@ -88,6 +89,20 @@ npm test          # every subsystem
 npm run test:pi   # would this survive a Raspberry Pi 4?
 npm run whereami  # what machine does she think she is on?
 ```
+
+## The one thing that is not local
+
+Everything above runs on your machine. **Speech recognition cannot.** Turning
+sound into words needs an acoustic model trained on thousands of hours of
+speech, which cannot be written from scratch here or trained on a Pi — so
+listening uses the browser's own recogniser, and Chrome and Edge send that
+audio to their servers.
+
+So: it is off until you switch it on, the page says exactly what happens when
+you do, and typing does everything voice does. Her camera is different —
+seeing is code in this repository, and those frames never leave the machine.
+
+Answering aloud is local in every current browser; only listening leaves.
 
 ## What she is not
 

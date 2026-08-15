@@ -458,3 +458,79 @@ $("haConnect").addEventListener("click", async () => {
   if (existing) showSkillCode(existing.source);
   chatSay(`I'm EVE. Ask me to "connect to home assistant" and I'll write the code for it myself — or ask "what can you do".`);
 })();
+
+// ---------------------------------------------------------------------------
+// Her ears and her eye, at the same time
+// ---------------------------------------------------------------------------
+const ears = new VoiceKit.Ears({
+  onPartial: (text) => { $("heardLine").textContent = `… ${text}`; },
+  onHeard: (text) => {
+    $("heardLine").textContent = `“${text}”`;
+    $("chatInput").value = "";
+    handleChat(text);
+  },
+  onState: ({ listening, error }) => {
+    $("listenBtn").textContent = listening ? "🎙️ Stop listening" : "🎙️ Start listening";
+    $("listenBtn").classList.toggle("active", listening);
+    if (error) $("voiceNote").textContent = `⚠️ ${error}`;
+    else if (listening) $("voiceNote").textContent = "Listening. Say something like “turn on the kitchen light”.";
+    if (!listening && !error) $("heardLine").textContent = "Not listening.";
+  },
+});
+
+const voice = new VoiceKit.Voice();
+const watching = new VoiceKit.Watching({
+  video: $("voiceVideo"),
+  canvas: $("voiceCanvas"),
+  onScene: (scene, report) => {
+    /* Say what she can actually tell, and say plainly when she cannot tell
+     * anything — a confident description of a covered lens is a lie. */
+    $("sceneLine").textContent = report.usable
+      ? `👁️ ${report.summary}`
+      : `👁️ ${report.why || "I cannot see well enough to say."}`;
+  },
+});
+
+$("listenBtn").addEventListener("click", () => {
+  if (!VoiceKit.Ears.available) {
+    $("voiceNote").textContent = `⚠️ ${VoiceKit.Ears.reason}`;
+    return;
+  }
+  try { ears.toggle(); }
+  catch (err) { $("voiceNote").textContent = `⚠️ ${err.message}`; }
+});
+
+$("watchBtn").addEventListener("click", async () => {
+  if (watching.running) {
+    watching.stop();
+    $("watchBtn").textContent = "👁️ Open her eye";
+    $("sceneLine").textContent = "Her eye is closed.";
+    return;
+  }
+  try {
+    await watching.start();
+    $("watchBtn").textContent = "👁️ Close her eye";
+  } catch (err) {
+    $("sceneLine").textContent = `⚠️ ${err.message}`;
+  }
+});
+
+$("speakBack").addEventListener("change", (e) => {
+  voice.enabled = e.target.checked && VoiceKit.Voice.available;
+  if (e.target.checked && !VoiceKit.Voice.available) {
+    $("voiceNote").textContent = "⚠️ This browser cannot speak. Everything else still works.";
+    e.target.checked = false;
+  }
+});
+
+/* Anything she says in the chat is also said aloud, if you asked for that.
+ * Wrapping chatSay rather than editing every call site keeps the two concerns
+ * apart — the conversation does not need to know a speaker exists. */
+const chatSayText = chatSay;
+chatSay = function (text, who = "eve", thinking = false) {
+  const node = chatSayText(text, who, thinking);
+  if (who === "eve" && !thinking) voice.say(text);
+  return node;
+};
+
+if (!VoiceKit.Ears.available) $("voiceNote").textContent = `ℹ️ ${VoiceKit.Ears.reason}`;

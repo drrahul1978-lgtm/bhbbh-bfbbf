@@ -21,7 +21,7 @@ const SHIP = [
   // Pages
   "eye.html", "index.html", "style.css", "eye.webmanifest",
   // Her mind
-  "nn.js", "intent.js", "learn.js",
+  "nn.js", "intent.js", "learn.js", "voice.js",
   "eve/vision/scene.js", "eve/vision/recognise.js",
   // Page logic
   "eye.js", "app.js",
@@ -50,18 +50,13 @@ if (missing.length) {
   process.exit(1);
 }
 
-/* The desktop app opens on her eye — the camera is the reason it exists as an
- * app rather than a page. Talking to her is one click from there. */
-fs.renameSync(path.join(DIST, "index.html"), path.join(DIST, "talk.html"));
-fs.renameSync(path.join(DIST, "eye.html"), path.join(DIST, "index.html"));
-
-// The renamed pages have to stay linked correctly to each other.
-for (const page of ["index.html", "talk.html"]) {
-  const file = path.join(DIST, page);
-  let html = fs.readFileSync(file, "utf8");
-  html = html.replace(/href="index\.html"/g, 'href="talk.html"').replace(/href="eye\.html"/g, 'href="index.html"');
-  fs.writeFileSync(file, html);
-}
-
+/* The desktop app opens on her own page, which is now all of her at once:
+ * hearing you, watching through the camera, answering, and learning. The eye
+ * trainer — teaching her specific objects — is one click from there.
+ *
+ * Nothing is renamed: index.html is already her page and eye.html is already
+ * the trainer, so the links in both files are correct as written. An earlier
+ * version shuffled the two and had to rewrite every href to match, which is a
+ * step that can only ever go wrong. */
 console.log(`dist/ ready — ${SHIP.length} files, ${(bytes / 1024).toFixed(0)}KB`);
-console.log(`the app opens on her eye; talking to her is one click away`);
+console.log(`the app opens on her page — voice, eye and conversation together`);

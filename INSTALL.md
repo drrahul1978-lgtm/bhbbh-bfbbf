@@ -40,8 +40,9 @@ can see until you choose to publish it.
 ### What you get
 
 A real desktop application: its own window, its own icon, a Start Menu entry,
-and an uninstaller. It opens on **her eye** — the camera trainer — with the
-conversation one click away.
+and an uninstaller. It opens on **her page** — the conversation, her
+voice, her eye and her learning together — with the object trainer one click
+away.
 
 The camera works with no certificate and no warnings, which is the main reason
 the app exists: a browser refuses a camera to any page that is not on a secure
@@ -58,7 +59,7 @@ feature the desktop app does.
 2. Copy this folder to the PC.
 3. **Double-click `Start EVE.cmd`.**
 
-She starts and your browser opens on her eye. Leave the black window open;
+She starts and your browser opens on her page. Leave the black window open;
 closing it stops her. If Node is missing, `Start EVE.cmd` says so and opens the
 download page rather than failing with a stack trace.
 
@@ -148,10 +149,11 @@ Once she is open:
 
 | What | Where | What to try |
 |---|---|---|
-| **Her eye** | opens first | Turn the camera on. Hold something up, name it, press *Take 8*. Then show her the same thing again — and something else entirely, to watch her say she does not recognise it. |
-| **Writing her own code** | 🧠 in the header, section 1 | Ask her to *connect to home assistant*. She works out the API, writes the adapter herself, and shows you the code before it runs. |
-| **Her learning** | 🧠 in the header, section 2 | Hit *Keep improving* and watch rounds get **rejected**. A quarter of her sentence shapes are never trained on, and that is what she is scored against. |
-| **Correcting her** | 🧠 in the header | When she misreads you, tell her what it should have meant. She replays it in every round from then on. |
+| **Teaching her objects** | 👁️ in the header | Hold something up, name it, press *Take 8*. Then show her the same thing again — and something else entirely, to watch her say she does not recognise it. |
+| **Writing her own code** | opens first, section 1 | Ask her to *connect to home assistant*. She works out the API, writes the adapter herself, and shows you the code before it runs. |
+| **Voice and eye together** | section 2 | Open her eye, start listening, tick *answer out loud* — then talk to her while she watches. Listening needs Chrome or Edge; everything else works everywhere. |
+| **Her learning** | section 3 | Hit *Keep improving* and watch rounds get **rejected**. A quarter of her sentence shapes are never trained on, and that is what she is scored against. |
+| **Correcting her** | section 1 | When she misreads you, tell her what it should have meant. She replays it in every round from then on. |
 
 ### What is worth checking, because it is where systems usually lie
 
@@ -162,4 +164,5 @@ Once she is open:
   the mechanism working, not failing.
 - Compare her two scores. "On phrasings she trained on" will be near-perfect;
   "on shapes she has never seen" is the honest one, and much lower.
-- Turn off your WiFi and use all of it. Nothing should change.
+- Turn off your WiFi and use all of it. Nothing should change — except
+  listening, which is the one thing that needs the network and says so.

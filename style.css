@@ -651,3 +651,62 @@ code {
   opacity: 0.72;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Her ears and her eye, side by side.
+   --------------------------------------------------------------------------- */
+
+.sense-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .sense-row { grid-template-columns: 1fr; }
+}
+
+.sense-eye video {
+  width: 100%;
+  border-radius: 12px;
+  background: #000;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.sense-ear {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+}
+
+.heard {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.speak-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+/* Listening is a state worth seeing from across the room. */
+#listenBtn.active {
+  box-shadow: 0 0 0 2px var(--bad, #ff6b6b);
+}
+
+.disclaimer.subtle {
+  font-size: 0.86rem;
+  opacity: 0.8;
+  margin-top: 1rem;
+}
