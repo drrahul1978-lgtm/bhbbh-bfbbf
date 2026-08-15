@@ -1,0 +1,3 @@
+Put photos of the remote in this folder.
+
+Any filename. .jpg or .png. 30-40 is the sweet spot, 20 is the minimum.
