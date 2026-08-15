@@ -218,6 +218,28 @@ async function handle(net, adapter, things, text) {
     return things;
   }
 
+  if (understood.intent === "greeting") {
+    say(`👋 Hello. I'm EVE.`);
+    return things;
+  }
+
+  if (understood.intent === "identity") {
+    say(`👁️  I'm EVE — an emergent virtual entity.`);
+    say(`   Written from scratch: no libraries, no pretrained model, nothing downloaded.`);
+    say(`   I work out what you mean, and I write my own code for APIs nobody described to me.`);
+    return things;
+  }
+
+  if (understood.intent === "thanks") {
+    say(`🙂 You're welcome.`);
+    return things;
+  }
+
+  if (understood.intent === "goodbye") {
+    say(`👋 Goodbye.`);
+    return things;
+  }
+
   if (understood.intent === "what_can_you_do") {
     say(
       `🧠 I work out what you mean, and I write my own code for APIs nobody has described to me.\n` +

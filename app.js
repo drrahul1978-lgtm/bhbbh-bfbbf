@@ -367,7 +367,31 @@ async function handleChat(text) {
 
   try {
     if (understood.intent === "unknown") {
-      chatSay(`I didn't follow that. I can connect to a new API and write the adapter for it, control anything I'm connected to, and tell you what I can do. If I should have understood that, correct me just above.`);
+      chatSay(`I didn't follow that. Try "hello", "what can you do", or — once I'm connected to something — "turn on the kitchen light". If I should have understood that, correct me just above.`);
+      return;
+    }
+
+    if (understood.intent === "greeting") {
+      chatSay(`Hello. I'm EVE. Ask me what I can do, or just talk to me.`);
+      return;
+    }
+
+    if (understood.intent === "identity") {
+      chatSay(
+        `I'm EVE — an emergent virtual entity.\n` +
+        `I was written from scratch: no libraries, no pretrained model, nothing downloaded. Every part of me is code on this machine.\n` +
+        `I understand what you say at ${pct(trainer.best)} on phrasings I was never trained on, I can see through a camera, I can learn your voice, and I write my own code for services I have never met.`
+      );
+      return;
+    }
+
+    if (understood.intent === "thanks") {
+      chatSay(`You're welcome.`);
+      return;
+    }
+
+    if (understood.intent === "goodbye") {
+      chatSay(`Goodbye. I'll be here.`);
       return;
     }
 

@@ -46,6 +46,28 @@
    * {thing} stands in for a device name, {number} for a value.
    */
   const INTENTS = {
+    greeting: [
+      "hello", "hi", "hey", "hello eve", "hi eve", "hey eve", "hello there",
+      "hi there", "hey there", "good morning", "good afternoon", "good evening",
+      "morning", "evening", "greetings", "hiya", "hello again", "hi again",
+    ],
+    identity: [
+      "what is your name", "who are you", "what are you", "what are you called",
+      "what should i call you", "who am i talking to", "tell me your name",
+      "introduce yourself", "what is eve", "are you eve", "your name",
+      "who is this", "what do i call you", "say your name", "who made you",
+      "what sort of thing are you", "tell me about yourself",
+    ],
+    thanks: [
+      "thank you", "thanks", "thanks eve", "thank you eve", "cheers",
+      "thank you very much", "thanks a lot", "much appreciated", "nice one",
+      "that is great thanks", "perfect thanks", "lovely thanks",
+    ],
+    goodbye: [
+      "goodbye", "bye", "bye eve", "goodbye eve", "see you", "see you later",
+      "good night", "goodnight", "talk later", "speak later", "that is all",
+      "that will be all", "we are done", "nothing else",
+    ],
     list_devices: [
       "what devices do you have", "list my devices", "show me everything",
       "what can you control", "what is connected", "show devices",
@@ -129,12 +151,12 @@
       "set up a new api", "add a new service", "connect to a new api",
     ],
     what_can_you_do: [
-      "what can you do", "what are you", "who are you", "what do you know",
-      "tell me about yourself", "what have you learned",
+      "what can you do", "what do you know",
+      "what have you learned",
       "what skills do you have", "what apis do you know", "list your skills",
       "how good are you", "what can you do for me", "what do you do",
       "what are your skills", "what else can you do", "tell me what you know",
-      "what are you able to do", "what do you know how to do",
+      "what do you know how to do",
       "how much do you know", "what are you good at",
     ],
   };
