@@ -223,3 +223,119 @@ $("objectName").addEventListener("keydown", (e) => { if (e.key === "Enter") teac
 window.addEventListener("beforeunload", stopCamera);
 
 renderKnown();
+
+// ---------------------------------------------------------------------------
+// Learning from a folder of photos
+//
+// The browser decodes JPEG, PNG and everything else natively, which is why this
+// lives here rather than in a command-line tool: doing it in Node would mean
+// writing a JPEG decoder from scratch to keep the zero-dependency promise.
+// ---------------------------------------------------------------------------
+
+/** A File → the pixels her eye works on. */
+async function imageFromFile(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error(`could not read ${file.name}`));
+      img.src = url;
+    });
+    /* Same working size her camera uses. Comparing a 4000px photo against a
+     * 160px camera frame would compare two different things. */
+    const w = 160;
+    const h = Math.max(1, Math.round((img.naturalHeight / img.naturalWidth) * w));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Group files by the folder they sit in — that folder names the object. */
+function groupByFolder(files) {
+  const groups = new Map();
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) continue;
+    const parts = (file.webkitRelativePath || file.name).split("/");
+    // The immediate parent folder, ignoring the wrapper folder you selected.
+    const label = parts.length > 1 ? parts[parts.length - 2] : "unnamed";
+    const name = label.replace(/[-_]+/g, " ").trim().toLowerCase();
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(file);
+  }
+  return groups;
+}
+
+async function importPhotos(files, forcedLabel = null) {
+  const groups = forcedLabel
+    ? new Map([[forcedLabel, [...files].filter((f) => f.type.startsWith("image/"))]])
+    : groupByFolder(files);
+
+  if (!groups.size) {
+    $("importStatus").textContent = "No images in there.";
+    return;
+  }
+
+  $("importReport").innerHTML = "";
+  let done = 0;
+  let total = 0;
+  for (const list of groups.values()) total += list.length;
+
+  for (const [label, list] of groups) {
+    /* A quarter held back, never learned from — otherwise the score below is
+     * her repeating photos she was trained on, which measures nothing. */
+    const holdout = Math.max(1, Math.round(list.length * 0.25));
+    const learnFrom = list.slice(0, list.length - holdout);
+    const testWith = list.slice(list.length - holdout);
+
+    for (const file of learnFrom) {
+      try { eye.learn(label, await imageFromFile(file)); } catch { /* skip an unreadable file */ }
+      done++;
+      $("importFill").style.width = `${(done / total) * 100}%`;
+      $("importStatus").textContent = `Learning “${label}” — ${done} of ${total} photos…`;
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    let right = 0;
+    for (const file of testWith) {
+      try {
+        const result = eye.recognise(await imageFromFile(file));
+        if (result.label === label) right++;
+      } catch { /* skip */ }
+      done++;
+      $("importFill").style.width = `${(done / total) * 100}%`;
+    }
+
+    const score = testWith.length ? right / testWith.length : null;
+    const row = document.createElement("div");
+    row.className = `capability ${score !== null && score >= 0.6 ? "yes" : "no"}`;
+    row.innerHTML = `<span class="capability-name"></span><span class="capability-detail"></span>`;
+    row.querySelector(".capability-name").textContent =
+      `${score !== null && score >= 0.6 ? "✅" : "⚠️"} ${label}`;
+    row.querySelector(".capability-detail").textContent =
+      `learned from ${learnFrom.length}, ${score === null ? "not scored" : `${(score * 100).toFixed(0)}% on ${testWith.length} held back`}` +
+      `${learnFrom.length < 15 ? " · under 20 photos is thin" : ""}`;
+    $("importReport").appendChild(row);
+  }
+
+  $("importFill").style.width = "0%";
+  $("importStatus").textContent =
+    `Done — ${groups.size} object${groups.size === 1 ? "" : "s"} from ${total} photos. ` +
+    `Point the camera at one to see whether it holds up in your room, which is the number that matters.`;
+  renderKnown();
+}
+
+$("pickFolderBtn").addEventListener("click", () => $("folderInput").click());
+$("folderInput").addEventListener("change", (e) => importPhotos(e.target.files));
+
+$("pickFilesBtn").addEventListener("click", () => $("filesInput").click());
+$("filesInput").addEventListener("change", (e) => {
+  const label = prompt("What are these photos of?");
+  if (label) importPhotos(e.target.files, label.trim().toLowerCase());
+});

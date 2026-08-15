@@ -98,6 +98,39 @@
       <em>“I do not recognise that”</em>, always. A recogniser that names its closest
       guess for something it has never seen is worse than useless.
     </div>
+
+    <!-- Teach her from a folder of photos -->
+    <section class="card panel">
+      <h2>📁 Teach her from photos you already have</h2>
+      <p class="hint">
+        Point her at your <code>training-images</code> folder and she learns every object
+        in it at once — <strong>the folder name becomes the name she says</strong>, so
+        <code>game-controller</code> becomes "game controller". Nothing is uploaded; the
+        photos are read in this browser and only the fingerprints are kept.
+      </p>
+
+      <div class="train-controls">
+        <button id="pickFolderBtn" class="primary-btn small">📁 Choose the training-images folder</button>
+        <button id="pickFilesBtn" class="ghost-btn small">🖼️ Or pick photos of one object</button>
+        <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
+        <input type="file" id="filesInput" accept="image/*" multiple hidden />
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress"><div class="progress-fill" id="importFill"></div></div>
+        <p class="status-msg" id="importStatus">Nothing imported yet.</p>
+      </div>
+
+      <div id="importReport" class="capability-list"></div>
+
+      <p class="hint">
+        A quarter of each object's photos are held back and never learned from, so the
+        score below is measured rather than assumed. <strong>Photos taken in real rooms
+        beat studio stock images</strong> — she reads colour and edge layout, so a picture
+        on a white background teaches her "object on white".
+      </p>
+    </section>
+
   </main>
 
   <footer class="site-footer">
