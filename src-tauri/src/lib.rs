@@ -15,7 +15,6 @@
 #[cfg(target_os = "windows")]
 fn allow_media(window: &tauri::WebviewWindow) {
     use webview2_com::PermissionRequestedEventHandler;
-    use windows::core::Interface;
     use webview2_com::Microsoft::Web::WebView2::Win32::{
         ICoreWebView2PermissionRequestedEventArgs, COREWEBVIEW2_PERMISSION_KIND_CAMERA,
         COREWEBVIEW2_PERMISSION_KIND_MICROPHONE, COREWEBVIEW2_PERMISSION_STATE_ALLOW,

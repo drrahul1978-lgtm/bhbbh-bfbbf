@@ -4,7 +4,7 @@
   "description": "EVE — an emergent virtual entity built from scratch: she writes her own code to work with any API, learns to understand you, and runs entirely on a Raspberry Pi 4 or your own machine.",
   "private": true,
   "scripts": {
-    "test": "node test/kernel.test.js && node test/platform.test.js && node test/external.test.js && node test/vision-eye.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/memory.test.js && node test/capabilities.test.js && node test/nn.test.js && node test/intent.test.js && node test/learn.test.js && node test/hearing.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/proxy.test.js && node test/integration.test.js",
+    "test": "node test/kernel.test.js && node test/platform.test.js && node test/external.test.js && node test/vision-eye.test.js && node test/sandbox.test.js && node test/registry.test.js && node test/review.test.js && node test/regression.test.js && node test/memory.test.js && node test/capabilities.test.js && node test/nn.test.js && node test/intent.test.js && node test/learn.test.js && node test/chat.test.js && node test/hearing.test.js && node test/skills.test.js && node test/discover.test.js && node test/connect.test.js && node test/proxy.test.js && node test/integration.test.js",
     "test:fast": "node test/kernel.test.js && node test/platform.test.js && node test/capabilities.test.js && node test/memory.test.js && node test/sandbox.test.js",
     "train": "node eve-learn.js",
     "train:watch": "node eve-learn.js --watch",

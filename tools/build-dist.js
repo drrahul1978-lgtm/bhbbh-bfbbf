@@ -21,7 +21,7 @@ const SHIP = [
   // Pages
   "eye.html", "index.html", "style.css", "eye.webmanifest",
   // Her mind
-  "nn.js", "intent.js", "learn.js", "voice.js", "hearing.js",
+  "nn.js", "intent.js", "learn.js", "chat.js", "voice.js", "hearing.js",
   "eve/vision/scene.js", "eve/vision/recognise.js",
   // Page logic
   "eye.js", "app.js",

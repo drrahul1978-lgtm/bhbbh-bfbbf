@@ -23,6 +23,10 @@ let lastUnderstood = null;
 
 const pct = (v) => (v == null ? "–" : `${(v * 100).toFixed(1)}%`);
 
+/* What she knows, plus anything you have taught her. This is the conversation
+ * itself — the intent network only decides whether you asked for an ACTION. */
+const knowledge = new Chat.Knowledge(Chat.loadTaught());
+
 // ---------------------------------------------------------------------------
 // Boot — load her mind, or train a starting one if the file is missing
 // ---------------------------------------------------------------------------
@@ -360,14 +364,47 @@ async function connectHomeAssistant(url, token) {
   chatSay(`Connected to ${info.detail}. I can see ${haThings.length} entities and control ${controllable} of them. Ask me to list devices, or just tell me what to switch.`);
 }
 
+/* Intents that DO something. Everything else is conversation, and goes to what
+ * she knows rather than to a canned line. */
+const ACTIONS = new Set([
+  "turn_on", "turn_off", "toggle", "set_level", "query_state", "list_devices", "connect",
+]);
+
 async function handleChat(text) {
   chatSay(text, "you");
+
+  // "remember that ..." — teaching her a new answer outright.
+  const teaching = Chat.parseTeaching(text);
+  if (teaching) {
+    knowledge.teach(teaching.question, teaching.answer);
+    Chat.saveTaught(knowledge.taught);
+    chatSay(`Noted. Ask me about "${teaching.question}" and I'll tell you that.`);
+    return;
+  }
+
   const understood = Intent.understand(trainer.net, text, haThings);
   showUnderstanding(understood);
 
+  /* Conversation first. An action only wins when she actually recognised one,
+   * which is what makes her a chatbot that can also do things rather than a
+   * remote control that occasionally talks. */
+  if (!ACTIONS.has(understood.intent)) {
+    const known = knowledge.find(text);
+    if (known.answer) {
+      chatSay(known.answer);
+      return;
+    }
+    // Greeting and courtesies still have their short replies below.
+  }
+
   try {
     if (understood.intent === "unknown") {
-      chatSay(`I didn't follow that. Try "hello", "what can you do", or — once I'm connected to something — "turn on the kitchen light". If I should have understood that, correct me just above.`);
+      chatSay(
+        `I don't know that one.\n\n` +
+        `I'd rather say so than make something up. You can teach me: say ` +
+        `"remember that ${text.replace(/^(what|who|where|when|why|how)\s+/i, "").slice(0, 40)} is ..." and I'll know it from now on.\n` +
+        `Or ask me what I can do, or what EVE stands for.`
+      );
       return;
     }
 
@@ -377,11 +414,8 @@ async function handleChat(text) {
     }
 
     if (understood.intent === "identity") {
-      chatSay(
-        `I'm EVE — an emergent virtual entity.\n` +
-        `I was written from scratch: no libraries, no pretrained model, nothing downloaded. Every part of me is code on this machine.\n` +
-        `I understand what you say at ${pct(trainer.best)} on phrasings I was never trained on, I can see through a camera, I can learn your voice, and I write my own code for services I have never met.`
-      );
+      const known = knowledge.find(text);
+      chatSay(known.answer || "I'm EVE — an emergent virtual entity, written from scratch and running entirely on this machine.");
       return;
     }
 
@@ -396,12 +430,13 @@ async function handleChat(text) {
     }
 
     if (understood.intent === "what_can_you_do") {
+      const known = knowledge.find(text);
       const skills = Skills.loadSkills();
       chatSay(
-        `I understand what you say at ${pct(trainer.best)} on phrasings I was never trained on, and I get better at it every round you run.\n` +
-        `I've written ${skills.length} adapter${skills.length === 1 ? "" : "s"} so far.\n` +
-        `I can work out an API from its own description and write the code to use it.\n` +
-        `I can't hold a conversation — there's no language model in me — and I can't name an object nobody showed me.`
+        (known.answer || "I work out what you mean, see through a camera, and write my own code for APIs.") +
+        `\n\nRight now: ${pct(trainer.best)} on phrasings I was never trained on, ` +
+        `${skills.length} adapter${skills.length === 1 ? "" : "s"} written, ` +
+        `${knowledge.taught.length} thing${knowledge.taught.length === 1 ? "" : "s"} you have taught me.`
       );
       return;
     }

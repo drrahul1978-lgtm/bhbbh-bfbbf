@@ -757,7 +757,6 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "webview2-com",
- "windows",
 ]
 
 [[package]]
