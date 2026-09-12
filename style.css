@@ -710,3 +710,47 @@ code {
   opacity: 0.8;
   margin-top: 1rem;
 }
+
+/* ---------------------------------------------------------------------------
+   One app, two tabs. The desktop window has no browser chrome, so this is the
+   only thing telling you where you are — it has to read as a place, not a link.
+   --------------------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text, #e8ecf4);
+  opacity: 0.65;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.tab:hover { opacity: 0.9; }
+
+.tab.active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--line, rgba(255, 255, 255, 0.14));
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent-color, #7aa2ff);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .tab { padding: 0.45rem 0.7rem; font-size: 0.85rem; }
+}
