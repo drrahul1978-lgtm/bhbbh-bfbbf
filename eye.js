@@ -107,6 +107,54 @@ function look() {
     li.textContent = `Closest matches: ${seen.ranked.slice(0, 3).map((r) => `${r.label} (${r.distance.toFixed(2)} away)`).join(", ")}`;
     notes.appendChild(li);
   }
+
+  tellTheLight(seen, report);
+}
+
+// ---------------------------------------------------------------- the status light
+//
+// On the Pi she has three LEDs on a breadboard, driven by eve-pi.js. The camera
+// lives in this page, so the page is what knows she has seen something she
+// cannot name — and that is exactly what the yellow light is for.
+//
+// If nothing is listening, nothing happens. She is just as usable without it.
+
+const LIGHT = "http://localhost:8099";
+let lightState = null;        // what we last told it, so we do not repeat ourselves
+let lightQuiet = false;       // true once we know nothing is listening
+let lastTold = 0;
+
+async function tellTheLight(seen, report) {
+  if (lightQuiet) return;
+
+  /* Only a frame she can actually see counts. A covered lens is not an unknown
+   * object — reporting it would light yellow every time someone walks past the
+   * camera at night. */
+  const wants = report.usable && !seen.label ? "unknown" : "known";
+  const now = Date.now();
+  if (wants === lightState && now - lastTold < 10000) return;
+
+  lightState = wants;
+  lastTold = now;
+
+  try {
+    if (wants === "unknown") {
+      const detail = seen.ambiguous?.length
+        ? `something like ${seen.ambiguous.join(" or ")}, but I am not sure`
+        : "an object I have never been taught";
+      await fetch(`${LIGHT}/saw-unknown`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ detail }),
+      });
+    } else {
+      await fetch(`${LIGHT}/taught`, { method: "POST" });
+    }
+  } catch {
+    /* Nothing listening — she is on a laptop, or eve-pi.js is not running.
+     * Stop trying rather than failing once a second forever. */
+    lightQuiet = true;
+  }
 }
 
 // ---------------------------------------------------------------- teaching
